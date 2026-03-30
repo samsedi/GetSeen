@@ -18,6 +18,10 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+    'chart.bar.fill': 'bar-chart',
+    'person.fill': 'person',
+    'megaphone.fill': 'announcement',
+    "scroll.fill": "",
 } as IconMapping;
 
 /**
@@ -27,7 +31,7 @@ const MAPPING = {
  */
 export function IconSymbol({
   name,
-  size = 24,
+  size,
   color,
   style,
 }: {

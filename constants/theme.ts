@@ -1,53 +1,86 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+
+
+const GETSEEN_PINK = '#FF2D55';
+const BRAND_NAVY = '#2B4373';
+const BRAND_NAVY_LIGHT = '#283593';
 
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+    light: {
+        text: '#11181C',
+        textSecondary: '#687076',
+        background: '#FFFFFF',
+        tint: GETSEEN_PINK,
+        icon: '#687076',
+        card: '#F2F2F2',
+        border: '#E1E4E8',
+        tabIconDefault: '#687076',
+        tabIconSelected: GETSEEN_PINK,
+        brandNavy: BRAND_NAVY,
+        brandNavyLight: BRAND_NAVY_LIGHT,
+        cardOverlay: 'rgba(0,0,0,0.35)',
+        whiteHeader: '#FFFFFF',
+
+        cardGrid: '#E8EFFF',
+        cardSurface: '#FFFFFF',
+        shadow: '#000000',
+        adRed: '#D32F2F',
+        star: '#FFD700',
+    },
+    dark: {
+        text: '#FFFFFF',
+        textSecondary: '#9BA1A6',
+        background: '#000000',
+        tint: GETSEEN_PINK,
+        icon: '#9BA1A6',
+        card: '#121212',
+        border: '#262626',
+        tabIconDefault: '#9BA1A6',
+        tabIconSelected: GETSEEN_PINK,
+        brandNavy: BRAND_NAVY,
+        brandNavyLight: BRAND_NAVY_LIGHT,
+        cardOverlay: 'rgba(0,0,0,0.45)',
+        whiteHeader: '#FFFFFF',
+        cardGrid: '#E8EFFF',
+        cardSurface: '#FFFFFF',
+        shadow: '#000000',
+        adRed: '#D32F2F',
+        star: '#FFD700',
+    },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const Typography = {
+    h1: {
+        fontSize: 30,
+        fontWeight: '900' as const,
+        letterSpacing: -1.5,
+        lineHeight: 40,
+    },
+    h2: {
+        fontSize: 24,
+        fontWeight: '800' as const,
+        letterSpacing: -0.5,
+        lineHeight: 30,
+    },
+    h3: {
+        fontSize: 18,
+        fontWeight: '700' as const,
+        lineHeight: 24,
+    },
+    body: {
+        fontSize: 16,
+        fontWeight: '500' as const,
+        lineHeight: 22,
+    },
+    caption: {
+        fontSize: 14,
+        fontWeight: '400' as const,
+        lineHeight: 18,
+    },
+    label: {
+        fontSize: 12,
+        fontWeight: '700' as const,
+        textTransform: 'uppercase' as const,
+    }
+};
