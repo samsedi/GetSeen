@@ -6,6 +6,7 @@ export default function HomeSubScreensLayout() {
             <Stack.Screen name="viewdetails" options={{ headerShown: false }} />
             <Stack.Screen name="reservenow" options={{ headerShown: false }} />
             <Stack.Screen name="wishlist" options={{ headerShown: false }} />
+            <Stack.Screen name="QRGenerator" options={{ headerShown: false }} />
         </Stack>
     );
 }

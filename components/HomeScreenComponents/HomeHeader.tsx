@@ -40,7 +40,7 @@ export default function HomeHeader() {
             <View style={styles.headerRow}>
 
                 {/* LEFT: Scan QR Code */}
-                <TouchableOpacity style={styles.iconCircle} onPress={()=>router.push('/homeSubScreens/qr-scan')}>
+                <TouchableOpacity style={styles.iconCircle} onPress={()=>router.push('/homeSubScreens/QRGenerator')}>
                     <MaterialCommunityIcons name="qrcode-scan" size={isTablet ? 20 : 18} color="white" />
                 </TouchableOpacity>
 

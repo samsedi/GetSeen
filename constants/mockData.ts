@@ -28,6 +28,14 @@ export interface LocationItem {
     locationInfo: InfoDetail[];
     mediaInfo: InfoDetail[];
 }
+
+export interface SavedQR {
+    id: string;
+    name: string;
+    url: string;
+    createdAt: string;
+    scans?: number; // Optional field for the "Report" feature
+}
 // --- 1. THE ROLE DATA (For your ChooseRoleScreen) ---
 
 export const ROLES: RoleData[] = [
@@ -189,4 +197,20 @@ export const MOCK_LOCATIONS: LocationItem[] = [
         ]
     },
 
+];
+export const MOCK_SAVED_QRS: SavedQR[] = [
+    {
+        id: '1',
+        name: 'Cafe One Promotion',
+        url: 'https://cafeone.com/promo',
+        createdAt: '01 Apr 2026 · 10:24 AM',
+        scans: 124
+    },
+    {
+        id: '2',
+        name: 'Easter Special',
+        url: 'https://brand.ng/easter',
+        createdAt: '28 Mar 2026 · 02:15 PM',
+        scans: 89
+    }
 ];
