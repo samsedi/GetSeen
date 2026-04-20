@@ -1,6 +1,4 @@
-import { Platform } from 'react-native';
-
-
+import { useColorScheme } from 'react-native';
 
 const GETSEEN_PINK = '#FF2D55';
 const BRAND_NAVY = '#2B4373';
@@ -21,7 +19,6 @@ export const Colors = {
         brandNavyLight: BRAND_NAVY_LIGHT,
         cardOverlay: 'rgba(0,0,0,0.35)',
         whiteHeader: '#FFFFFF',
-
         cardGrid: '#E8EFFF',
         cardSurface: '#FFFFFF',
         shadow: '#000000',
@@ -41,14 +38,28 @@ export const Colors = {
         brandNavy: BRAND_NAVY,
         brandNavyLight: BRAND_NAVY_LIGHT,
         cardOverlay: 'rgba(0,0,0,0.45)',
-        whiteHeader: '#FFFFFF',
-        cardGrid: '#E8EFFF',
-        cardSurface: '#FFFFFF',
+        whiteHeader: '#FFFFFF', // Reverted to your original
+        cardGrid: '#E8EFFF',    // Reverted to your original
+        cardSurface: '#FFFFFF', // Reverted to your original
         shadow: '#000000',
         adRed: '#D32F2F',
         star: '#FFD700',
     },
 };
+
+// 1. Export a Type for the Theme to use in components
+export type AppTheme = typeof Colors.light;
+
+/**
+ * 2. THE FIX: Custom hook to safely get the theme
+ * This handles the TS7053 error by ensuring the key is always 'light' or 'dark'
+ */
+export function useAppTheme(): AppTheme {
+    const scheme = useColorScheme();
+    // Force fallback to 'light' if scheme is null, undefined, or 'unspecified'
+    const validScheme = (scheme === 'dark') ? 'dark' : 'light';
+    return Colors[validScheme];
+}
 
 export const Typography = {
     h1: {

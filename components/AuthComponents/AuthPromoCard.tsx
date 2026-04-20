@@ -11,7 +11,7 @@ interface AuthPromoCardProps {
 
 export default function AuthPromoCard({ title, subtitle, bgColor, iconName }: AuthPromoCardProps) {
     return (
-        <View style={[styles.promoCard, { backgroundColor:'#2B4373'  }]}>
+        <View style={[styles.promoCard, { backgroundColor:bgColor  }]}>
             <View style={styles.promoContent}>
                 <Text style={styles.promoTitle}>{title}</Text>
                 <Text style={styles.promoSubtitle}>{subtitle}</Text>

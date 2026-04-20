@@ -6,13 +6,13 @@ import {
     ScrollView,
     useWindowDimensions,
     useColorScheme,
-    Image, // 1. Import Image
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ROLES } from '@/constants/mockData';
 import RoleCard from '@/components/RoleScreenComponents/RoleCard';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors, Typography } from '@/constants/theme';
+import { Image } from 'expo-image';
 
 const WORDS = ["EAT", "WORK", "PLAY", "SHOP"];
 
@@ -72,7 +72,7 @@ export default function RoleScreen() {
                         styles.logoImage,
                         { width: isTablet ? 150 : 120 } // Responsive sizing
                     ]}
-                    resizeMode="contain"
+                    contentFit="contain"
                 />
             </View>
 
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     },
     // 3. Add logo styling
     logoImage: {
-        height: 40, // Height remains consistent to match headerNav
+        height: 40,
     },
     heroSection: {
         marginBottom: 35,

@@ -1,5 +1,17 @@
 import { ImageSourcePropType } from 'react-native';
 
+// --- 1. INTERFACES ---
+
+export interface Package {
+    id: string;
+    name: string;          // e.g. "Boost (24 Hours)"
+    emoji: string;         // e.g. "⚡"
+    days: number;          // base duration in days
+    basePrice: number;     // price for 1 unit (parsed, no commas)
+    discountVsBoost?: number; // e.g. 8 means "-8% vs Boost"
+    description: string;   // shown below selected tab
+    features: string[];
+}
 
 export interface RoleData {
     id: 'advertiser' | 'owner';
@@ -10,6 +22,7 @@ export interface RoleData {
     buttonColor: string[];
     themeColor: string;
 }
+
 export interface InfoDetail {
     label: string;
     value: string;
@@ -18,7 +31,7 @@ export interface InfoDetail {
 export interface LocationItem {
     id: string;
     name: string;
-    price: string;
+    price: string;          // display price (cheapest package)
     rating: number;
     category: string;
     images: ImageSourcePropType[];
@@ -27,6 +40,7 @@ export interface LocationItem {
     summary: string;
     locationInfo: InfoDetail[];
     mediaInfo: InfoDetail[];
+    packages: Package[];
 }
 
 export interface SavedQR {
@@ -34,9 +48,10 @@ export interface SavedQR {
     name: string;
     url: string;
     createdAt: string;
-    scans?: number; // Optional field for the "Report" feature
+    scans?: number;
 }
-// --- 1. THE ROLE DATA (For your ChooseRoleScreen) ---
+
+// --- 2. ROLE DATA ---
 
 export const ROLES: RoleData[] = [
     {
@@ -45,20 +60,21 @@ export const ROLES: RoleData[] = [
         title: 'Advertiser',
         description: 'Launch campaigns on screens across the city and scale your visibility instantly.',
         icon: 'megaphone',
-        buttonColor: ['#D11243', '#FF5B7F'], // Pink/Red Gradient
-        themeColor: '#FFF0F3', // Very light pink
+        buttonColor: ['#D11243', '#FF5B7F'],
+        themeColor: '#FFF0F3',
     },
     {
         id: 'owner',
         tag: 'SCREEN OWNER',
         title: 'Screen Owner',
-        description: 'Monetize your venue’s screens by hosting ads from premium brands.',
+        description: 'Monetize your venue\'s screens by hosting ads from premium brands.',
         icon: 'storefront',
-        buttonColor: [ '#2B4373'], // Dark Slate Gradient
-        themeColor: '#EDF2F7', // Very light blue/gray
+        buttonColor: ['#2B4373'],
+        themeColor: '#EDF2F7',
     }
 ];
 
+// --- 3. MOCK LOCATIONS ---
 
 export const MOCK_LOCATIONS: LocationItem[] = [
     {
@@ -74,19 +90,47 @@ export const MOCK_LOCATIONS: LocationItem[] = [
         ],
         address: "103 Bachita Cl, Garki, Abuja 900103, Federal Capital Territory",
         distance: "23 m",
-        summary: "Two screens (1 Standing LED & 1 TV Screen) Madagascar is a hot spot lounge in the city of Abuja with guests from all walks of life. It’s buzzing daily and overly so on weekends. This is a sure place to get your brand seen.",
+        summary: "Two screens (1 Standing LED & 1 TV Screen) Madagascar is a hot spot lounge in the city of Abuja. This is a sure place to get your brand seen.",
         locationInfo: [
             { label: "Opening hours weekdays", value: "10am to 12pm" },
-            { label: "Opening hours weekends", value: "10am to 3am" },
             { label: "Estimated monthly visitors", value: "7000" },
-            { label: "Age range", value: "25 to 60" },
             { label: "Average dwell time", value: "2 hours" },
         ],
         mediaInfo: [
             { label: "No of screens", value: "2" },
-            { label: "Dimensions", value: "1920/1080" },
-            { label: "Format", value: "Static Image or Mp4 video (15 Sec max)" },
+            { label: "Format", value: "Static Image or Mp4 video" },
             { label: "Estimated daily Ad play", value: "Min 600 times" },
+        ],
+        packages: [
+            {
+                id: 'boost',
+                name: 'Boost (24 Hours)',
+                emoji: '⚡',
+                days: 1,
+                basePrice: 15000,
+                description: 'Quick burst of visibility — ideal for launches and flash promos.',
+                features: ['100 plays/day', 'Off-peak hours', '10s Video or Static'],
+            },
+            {
+                id: 'campaign',
+                name: 'Campaign (7 Days)',
+                emoji: '⭐',
+                days: 7,
+                basePrice: 13800,
+                discountVsBoost: 8,
+                description: 'Sustained visibility & stronger results (~₦13,800/day).',
+                features: ['300 plays/day', 'Peak time slots', '15s Video'],
+            },
+            {
+                id: 'dominance',
+                name: 'Dominance (30 Days)',
+                emoji: '👑',
+                days: 30,
+                basePrice: 12300,
+                discountVsBoost: 18,
+                description: 'Maximum brand recall — own the screen for the full month (~₦12,300/day).',
+                features: ['600+ plays/day', 'Top screen placement', 'Static + Video'],
+            },
         ]
     },
     {
@@ -98,14 +142,39 @@ export const MOCK_LOCATIONS: LocationItem[] = [
         images: [require('@/assets/images/office.jpg')],
         address: "17 Herbert Macaulay Way, Yaba, Lagos",
         distance: "1.2 km",
-        summary: "Premium co-working space powered by Sterling Bank, ideal for tech talents and innovators in the heart of Yaba.",
-        locationInfo: [
-            { label: "Opening hours", value: "8am to 8pm" },
-            { label: "Monthly traffic", value: "2500" },
-        ],
-        mediaInfo: [
-            { label: "Screens", value: "4 Indoor Monitors" },
-            { label: "Format", value: "JPEG/PNG" },
+        summary: "Premium co-working space powered by Sterling Bank, ideal for tech talents.",
+        locationInfo: [{ label: "Opening hours", value: "8am to 8pm" }],
+        mediaInfo: [{ label: "Screens", value: "4 Indoor Monitors" }],
+        packages: [
+            {
+                id: 'boost',
+                name: 'Boost (24 Hours)',
+                emoji: '⚡',
+                days: 1,
+                basePrice: 7900,
+                description: 'Get your brand in front of Nigeria\'s tech community for a day.',
+                features: ['50 plays/day', 'Static only'],
+            },
+            {
+                id: 'campaign',
+                name: 'Campaign (7 Days)',
+                emoji: '⭐',
+                days: 7,
+                basePrice: 7268,
+                discountVsBoost: 8,
+                description: 'A week of consistent visibility in a high-focus environment (~₦7,268/day).',
+                features: ['150 plays/day', 'Video enabled'],
+            },
+            {
+                id: 'dominance',
+                name: 'Dominance (30 Days)',
+                emoji: '👑',
+                days: 30,
+                basePrice: 6478,
+                discountVsBoost: 18,
+                description: 'Own the co-working audience for the entire month (~₦6,478/day).',
+                features: ['300 plays/day', 'Video + Static', 'Priority placement'],
+            },
         ]
     },
     {
@@ -119,7 +188,38 @@ export const MOCK_LOCATIONS: LocationItem[] = [
         distance: "4.5 km",
         summary: "High-energy fitness hub with prime digital real estate located right in the cardio section.",
         locationInfo: [{ label: "Peak hours", value: "5pm to 9pm" }],
-        mediaInfo: [{ label: "Screens", value: "2 Portrait LEDs" }]
+        mediaInfo: [{ label: "Screens", value: "2 Portrait LEDs" }],
+        packages: [
+            {
+                id: 'boost',
+                name: 'Boost (24 Hours)',
+                emoji: '⚡',
+                days: 1,
+                basePrice: 2500,
+                description: 'A single high-energy day targeting fitness-focused consumers.',
+                features: ['10s Static Image', 'Random rotation'],
+            },
+            {
+                id: 'campaign',
+                name: 'Campaign (7 Days)',
+                emoji: '⭐',
+                days: 7,
+                basePrice: 2300,
+                discountVsBoost: 8,
+                description: 'Hit gym-goers during their weekly routine (~₦2,300/day).',
+                features: ['Prime time only', '15s Video loop'],
+            },
+            {
+                id: 'dominance',
+                name: 'Dominance (30 Days)',
+                emoji: '👑',
+                days: 30,
+                basePrice: 2050,
+                discountVsBoost: 18,
+                description: 'Become the go-to brand for every workout this month (~₦2,050/day).',
+                features: ['Peak + off-peak', 'Static + Video', 'Max frequency'],
+            },
+        ]
     },
     {
         id: '4',
@@ -127,77 +227,48 @@ export const MOCK_LOCATIONS: LocationItem[] = [
         price: '5,000',
         rating: 4.7,
         category: 'Malls',
-        images: [
-            require('@/assets/images/supermarket.jpg'),
-            require('@/assets/images/gym.jpg'),
-            require('@/assets/images/resturant.jpg'),
-        ],
+        images: [require('@/assets/images/supermarket.jpg')],
         address: "176/174 Obafemi Awolowo Way, Ikeja, Lagos",
         distance: "4.2 km",
-        summary: "The premier shopping destination in Lagos Mainland. High footfall with multiple digital touchpoints at every entrance and exit.",
-        locationInfo: [
-            { label: "Opening hours", value: "9am to 9pm daily" },
-            { label: "Estimated monthly footfall", value: "850,000" },
-            { label: "Target audience", value: "Shoppers, Families, Gen Z" },
-            { label: "Peak times", value: "Weekends & Public Holidays" },
-        ],
-        mediaInfo: [
-            { label: "No of screens", value: "12 Digital Pillars" },
-            { label: "Dimensions", value: "1080x1920 (Portrait)" },
-            { label: "Content format", value: "Video (10 Sec) or Static Image" },
-            { label: "Audio", value: "No" },
+        summary: "The premier shopping destination in Lagos Mainland. High footfall with multiple digital touchpoints.",
+        locationInfo: [{ label: "Estimated monthly footfall", value: "850,000" }],
+        mediaInfo: [{ label: "No of screens", value: "12 Digital Pillars" }],
+        packages: [
+            {
+                id: 'boost',
+                name: 'Boost (24 Hours)',
+                emoji: '⚡',
+                days: 1,
+                basePrice: 5000,
+                description: 'Flash your brand across 12 mall pillars for a full day.',
+                features: ['2 Pillar screens', '10s loop', 'Static only'],
+            },
+            {
+                id: 'campaign',
+                name: 'Campaign (7 Days)',
+                emoji: '⭐',
+                days: 7,
+                basePrice: 4600,
+                discountVsBoost: 8,
+                description: 'Capture weekend shoppers and weekday foot traffic (~₦4,600/day).',
+                features: ['Center stage screens', 'Full video support'],
+            },
+            {
+                id: 'dominance',
+                name: 'Dominance (30 Days)',
+                emoji: '👑',
+                days: 30,
+                basePrice: 4100,
+                discountVsBoost: 18,
+                description: 'Complete mall takeover — all 12 pillars, maximum frequency (~₦4,100/day).',
+                features: ['All 12 pillars', 'Maximum frequency', 'Static + Video'],
+            },
         ]
-    },
-    {
-        id: '5',
-        name: 'Lounge 42',
-        price: '4,200',
-        rating: 4.3,
-        category: 'Lounge',
-        images: [
-            require('@/assets/images/office.jpg'),
-            require('@/assets/images/resturant.jpg'),
-        ],
-        address: "42 Gana Street, Maitama, Abuja",
-        distance: "1.5 km",
-        summary: "An exclusive rooftop lounge in Maitama. Known for its luxury ambiance and a high concentration of high-net-worth individuals.",
-        locationInfo: [
-            { label: "Opening hours", value: "4pm to 2am" },
-            { label: "Average dwell time", value: "3.5 hours" },
-            { label: "Gender demographic", value: "55% Male 45% Female" },
-        ],
-        mediaInfo: [
-            { label: "No of screens", value: "4 TV Screens" },
-            { label: "Dimensions", value: "1920/1080" },
-            { label: "Placement", value: "Behind the Bar & VIP Section" },
-        ]
-    },
-    {
-        id: '6',
-        name: 'HQ Offices VI',
-        price: '6,000',
-        rating: 4.6,
-        category: 'Offices',
-        images: [
-            require('@/assets/images/office.jpg'),
-            require('@/assets/images/office.jpg'), // Added duplicate as placeholder for carousel
-        ],
-        address: "Plot 12, Adetokunbo Ademola St, Victoria Island, Lagos",
-        distance: "8.9 km",
-        summary: "A Grade-A corporate office building. Get your brand seen by top executives and professionals in the heart of Nigeria's financial hub.",
-        locationInfo: [
-            { label: "Active hours", value: "8am to 6pm (Mon-Fri)" },
-            { label: "Audience", value: "Professionals & Executives" },
-            { label: "Monthly traffic", value: "15,000" },
-        ],
-        mediaInfo: [
-            { label: "No of screens", value: "2 Lift Lobby LEDs" },
-            { label: "Dimensions", value: "1280x720" },
-            { label: "Format", value: "Short looping Mp4 (5 Sec max)" },
-        ]
-    },
-
+    }
 ];
+
+// --- 4. SAVED QR DATA ---
+
 export const MOCK_SAVED_QRS: SavedQR[] = [
     {
         id: '1',

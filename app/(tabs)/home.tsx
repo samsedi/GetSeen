@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -7,53 +7,66 @@ import {
     useColorScheme,
     useWindowDimensions,
     TouchableOpacity,
+    Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // 1. Import this
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import HomeHeader from "@/components/HomeScreenComponents/HomeHeader";
-import VenueNavigation from "@/components/HomeScreenComponents/VenueNavigation";
-import LocationCardList from "@/components/HomeScreenComponents/LocationCardList";
-import CampaignOverview from "@/components/HomeScreenComponents/CampaignOverview";
+import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
+import { useReservationStore } from '@/store/useReservationStore';
 
-import { Colors, Typography } from "@/constants/theme";
+import HomeHeader from '@/components/HomeScreenComponents/HomeHeader';
+import VenueNavigation from '@/components/HomeScreenComponents/VenueNavigation';
+import LocationCardList from '@/components/HomeScreenComponents/LocationCardList';
+import CampaignOverview from '@/components/HomeScreenComponents/CampaignOverview';
+import PackageModal from '@/components/HomeScreenComponents/PackageSelectionModal';
+
 import { MOCK_LOCATIONS } from '@/constants/mockData';
 
-type Theme = typeof Colors.light;
+type Theme = AppTheme;
 
 export default function HomeScreen() {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
     const colorScheme = useColorScheme() ?? 'light';
-    const theme = Colors[colorScheme];
-
-    // 2. Get the bottom inset (e.g., height of the 3-button nav)
+    const theme = useAppTheme();
     const insets = useSafeAreaInsets();
 
-    const [selectedVenue, setSelectedVenue] = useState("For You");
+    const isModalVisible = useReservationStore((state) => state.isModalVisible);
+    const activeLocation = useReservationStore((state) => state.activeLocation);
+    const closeReservation = useReservationStore((state) => state.closeReservation);
+
+    const [selectedVenue, setSelectedVenue] = useState('For You');
 
     const filteredLocations = useMemo(() => {
-        if (selectedVenue === "For You") return MOCK_LOCATIONS;
-        return MOCK_LOCATIONS.filter(item => item.category === selectedVenue);
+        if (selectedVenue === 'For You') return MOCK_LOCATIONS;
+        return MOCK_LOCATIONS.filter((item) => item.category === selectedVenue);
     }, [selectedVenue]);
 
-    // 3. Pass insets.bottom to the styles
-    const styles = useMemo(() =>
-            createStyles(isTablet, theme, insets.bottom),
-        [isTablet, theme, insets.bottom]
+    const styles = useMemo(
+        () => createStyles(isTablet, theme, insets.bottom),
+        [isTablet, theme, insets.bottom],
     );
+
+    /**
+     * Stable callback — prevents VenueNavigation from re-rendering
+     * every time HomeScreen re-renders due to modal visibility change.
+     */
+    const handleVenueSelect = useCallback((venue: string) => {
+        setSelectedVenue(venue);
+    }, []);
 
     return (
         <View style={styles.rootContainer}>
-            <StatusBar style="light" />
+            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
 
             <HomeHeader />
 
             <ScrollView
-                // 4. Styles are now applied correctly to contentContainer
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
+                removeClippedSubviews={Platform.OS === 'android'}
             >
                 <CampaignOverview />
 
@@ -68,7 +81,7 @@ export default function HomeScreen() {
 
                 <VenueNavigation
                     selected={selectedVenue}
-                    setSelected={setSelectedVenue}
+                    setSelected={handleVenueSelect}
                 />
 
                 <LocationCardList
@@ -76,19 +89,24 @@ export default function HomeScreen() {
                     selectedVenue={selectedVenue}
                 />
 
-                {/* Second list for testing scroll */}
                 <LocationCardList
                     data={filteredLocations}
                     selectedVenue={selectedVenue}
                 />
             </ScrollView>
+
+            <PackageModal
+                visible={isModalVisible}
+                onClose={closeReservation}
+                item={activeLocation}
+                theme={theme}
+                isTablet={isTablet}
+            />
         </View>
     );
 }
 
-// 5. Added bottomInset parameter
 const createStyles = (isTablet: boolean, theme: Theme, bottomInset: number) => {
-    // Logic: TabBar height (~65-80) + Floating Bottom gap (~10-20) + Extra breathing room
     const safeBottomPadding = bottomInset + (isTablet ? 120 : 100);
 
     return StyleSheet.create({
@@ -97,7 +115,6 @@ const createStyles = (isTablet: boolean, theme: Theme, bottomInset: number) => {
             backgroundColor: theme.background,
         },
         scrollContainer: {
-            // This is the magic fix:
             paddingBottom: safeBottomPadding,
         },
         listSection: {
