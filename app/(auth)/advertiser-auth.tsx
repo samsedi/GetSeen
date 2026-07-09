@@ -1,7 +1,8 @@
 import React from 'react';
 import {
     StyleSheet, View, ScrollView, TouchableOpacity,
-    Text, useColorScheme, Image, useWindowDimensions, ActivityIndicator
+    Text, useColorScheme, Image, useWindowDimensions, ActivityIndicator,
+    KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,8 +59,12 @@ export default function AdvertiserAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <AuthPromoCard
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <AuthPromoCard
                     title={isSignIn ? 'Welcome Back!' : 'Advertise Your Brand'}
                     subtitle={
                         isSignIn
@@ -212,6 +217,7 @@ export default function AdvertiserAuth() {
                     }
                 </TouchableOpacity>
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }

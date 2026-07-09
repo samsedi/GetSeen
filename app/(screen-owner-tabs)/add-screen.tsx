@@ -111,7 +111,11 @@ export default function AddScreenScreen() {
 
     // ─── Render ────────────────────────────────────────────────────────────
     return (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView 
+            style={{ flex: 1 }} 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
             {/* Header */}
             <View style={[styles.header, { backgroundColor: theme.card, paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 42 }]}>
                 <TouchableOpacity
@@ -132,6 +136,8 @@ export default function AddScreenScreen() {
                 style={[styles.container, { backgroundColor: theme.cardSoft }]}
                 contentContainerStyle={styles.contentContainer}
                 showsVerticalScrollIndicator={false}
+                automaticallyAdjustKeyboardInsets={true}
+                keyboardShouldPersistTaps="handled"
             >
                 {/* Venue Title */}
                 <View style={styles.formGroup}>

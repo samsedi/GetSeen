@@ -1,7 +1,8 @@
 import React from 'react';
 import {
     StyleSheet, View, ScrollView, TouchableOpacity,
-    Text, useColorScheme, useWindowDimensions, ActivityIndicator
+    Text, useColorScheme, useWindowDimensions, ActivityIndicator,
+    KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,8 +59,12 @@ export default function VenueOwnerAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <AuthPromoCard
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                    <AuthPromoCard
                     title={promo.title}
                     subtitle={promo.subtitle}
                     bgColor="#D11243"
@@ -159,6 +164,7 @@ export default function VenueOwnerAuth() {
                     }
                 </TouchableOpacity>
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
