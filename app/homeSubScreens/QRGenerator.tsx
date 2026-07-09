@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -9,17 +9,20 @@ import {
     useWindowDimensions,
     useColorScheme,
     Platform,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    Modal,
+    Pressable
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// Theme & Store
+// Theme & Custom Hook
 import { Colors } from '@/constants/theme';
-import { useAlertStore } from '@/store/useAlertStore';
+import { useQRGenerator } from '@/hooks/useQRGenerator';
 
 // Components & Data
-import { MOCK_SAVED_QRS, SavedQR } from '@/constants/mockData';
+import { SavedQR } from '@/constants/mockData';
 import { QRPreviewCard } from '@/components/QrComponents/QRPreviewCard';
 import { SavedQRCard } from '@/components/QrComponents/SavedQRCard';
 
@@ -72,55 +75,35 @@ export default function QRGenerator() {
     const theme = Colors[colorScheme];
     const router = useRouter();
 
-    // Glass Alert Store
-    const showAlert = useAlertStore((state) => state.showAlert);
-
-    const [qrName, setQrName] = useState('');
-    const [websiteUrl, setWebsiteUrl] = useState('');
-    const [savedQRs, setSavedQRs] = useState<SavedQR[]>(MOCK_SAVED_QRS);
+    const {
+        qrName,
+        setQrName,
+        websiteUrl,
+        setWebsiteUrl,
+        savedQRs,
+        qrImageUrl,
+        viewedQR,
+        handleCreateQR,
+        handleDownload,
+        handleView,
+        handleDismissView,
+        handleReport,
+        handleDelete,
+        buildQrImageUrl,
+    } = useQRGenerator();
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
-
-    // QR API URL Construction
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(websiteUrl || "https://getseen.app")}&color=2B4373`;
-
-    // --- Handlers ---
-    const handleCreateQR = () => {
-        if (!qrName || !websiteUrl) {
-            showAlert("Missing Info", "Please provide a name and a link to generate your code.");
-            return;
-        }
-
-        const newQR: SavedQR = {
-            id: Math.random().toString(),
-            name: qrName,
-            url: websiteUrl,
-            createdAt: new Date().toLocaleString('en-GB', {
-                day: '2-digit', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit', hour12: true
-            }).replace(',', ' ·'),
-            scans: 0
-        };
-
-        setSavedQRs([newQR, ...savedQRs]);
-        setQrName('');
-        setWebsiteUrl('');
-        showAlert("Success", "New QR Code has been created and saved!");
-    };
 
     const renderItem = useCallback(({ item }: { item: SavedQR }) => (
         <SavedQRCard
             qr={item}
             theme={theme}
-            onDownload={() => showAlert("Download", "Your high-res QR code is being prepared.")}
-            onView={() => showAlert("External Link", `Redirecting to: ${item.url}`)}
-            onReport={() => showAlert("Analytics", "Loading real-time scan data...")}
-            onDelete={() => {
-                setSavedQRs(prev => prev.filter(q => q.id !== item.id));
-                showAlert("Deleted", "The campaign was successfully removed.");
-            }}
+            onDownload={() => handleDownload(item)}
+            onView={() => handleView(item)}
+            onReport={handleReport}
+            onDelete={() => handleDelete(item.id)}
         />
-    ), [theme, showAlert]);
+    ), [theme, handleDownload, handleView, handleReport, handleDelete]);
 
     return (
         <KeyboardAvoidingView
@@ -165,6 +148,48 @@ export default function QRGenerator() {
                     <Text style={styles.mainBtnText}>Create New QR</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* QR Preview Modal */}
+            {viewedQR && (
+                <Modal
+                    visible={true}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={handleDismissView}
+                >
+                    <Pressable style={styles.modalBackdrop} onPress={handleDismissView}>
+                        <Pressable style={[styles.modalCard, { backgroundColor: theme.card }]} onPress={() => {}}>
+                            <View style={styles.modalHeader}>
+                                <Text style={[styles.modalTitle, { color: theme.text }]}>{viewedQR.name}</Text>
+                                <TouchableOpacity onPress={handleDismissView} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close-circle" size={28} color={theme.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.modalQrContainer}>
+                                <Image
+                                    source={{ uri: buildQrImageUrl(viewedQR.url) }}
+                                    style={styles.modalQrImage}
+                                    contentFit="contain"
+                                />
+                            </View>
+
+                            <Text style={[styles.modalUrl, { color: theme.textSecondary }]} numberOfLines={2}>
+                                {viewedQR.url}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={[styles.modalDownloadBtn, { backgroundColor: '#2B4373' }]}
+                                onPress={() => handleDownload(viewedQR)}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="download-outline" size={18} color="white" style={{ marginRight: 8 }} />
+                                <Text style={styles.modalDownloadText}>Save to Photos</Text>
+                            </TouchableOpacity>
+                        </Pressable>
+                    </Pressable>
+                </Modal>
+            )}
         </KeyboardAvoidingView>
     );
 }
@@ -251,5 +276,67 @@ const createStyles = (isTablet: boolean, theme: any) => StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: '800'
-    }
+    },
+
+    // --- QR Preview Modal ---
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 30,
+    },
+    modalCard: {
+        width: '100%',
+        maxWidth: 380,
+        borderRadius: 24,
+        padding: 24,
+        alignItems: 'center',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        flex: 1,
+        marginRight: 12,
+    },
+    modalQrContainer: {
+        width: 260,
+        height: 260,
+        borderRadius: 20,
+        backgroundColor: 'white',
+        padding: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    modalQrImage: {
+        width: 228,
+        height: 228,
+    },
+    modalUrl: {
+        fontSize: 13,
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    modalDownloadBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        borderRadius: 14,
+        width: '100%',
+    },
+    modalDownloadText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: '700',
+    },
 });

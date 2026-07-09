@@ -1,12 +1,12 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity,
-    useWindowDimensions, ScrollView,
-    NativeSyntheticEvent, NativeScrollEvent
+    useWindowDimensions, ScrollView
 } from 'react-native';
 import { useAppTheme, AppTheme } from '@/constants/theme';
 import { Image } from 'expo-image';
 import { useRouter } from "expo-router";
+import { useScreenCarousel } from '@/hooks/useScreenCarousel';
 
 export interface ScreenItem {
     id: string;
@@ -30,13 +30,16 @@ export default function ScreenCard({ item, ownerTint }: ScreenCardProps) {
     const isTablet = width >= 600;
     const theme = useAppTheme();
 
-    const [activeIndex, setActiveIndex] = useState(0);
-    const scrollRef = useRef<ScrollView>(null);
-    const activeIndexRef = useRef(0);
-    const isManualScrolling = useRef(false);
-
     const CARD_WIDTH = isTablet ? 160 : 130;
     const IMAGE_HEIGHT = isTablet ? 110 : 90;
+
+    const {
+        activeIndex,
+        scrollRef,
+        handleScroll,
+        onScrollBeginDrag,
+        onMomentumScrollEnd
+    } = useScreenCarousel(item.images, CARD_WIDTH, 2500);
 
     const styles = useMemo(
         () => createStyles(CARD_WIDTH, IMAGE_HEIGHT, isTablet, theme, ownerTint),
@@ -49,34 +52,8 @@ export default function ScreenCard({ item, ownerTint }: ScreenCardProps) {
         ? theme.textSecondary
         : isOnline ? theme.success : theme.error;
 
-    // Auto-scroll every 2.5s
-    useEffect(() => {
-        if (item.images.length <= 1) return;
-
-        const timer = setInterval(() => {
-            if (isManualScrolling.current) return;
-            const next = (activeIndexRef.current + 1) % item.images.length;
-            scrollRef.current?.scrollTo({ x: next * CARD_WIDTH, animated: true });
-            activeIndexRef.current = next;
-            setActiveIndex(next);
-        }, 2500);
-
-        return () => clearInterval(timer);
-    }, [item.images.length, CARD_WIDTH]);
-
-    const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
-        if (index !== activeIndexRef.current) {
-            activeIndexRef.current = index;
-            setActiveIndex(index);
-        }
-    };
-
     const handleManagePress = () => {
         if (isDraft) {
-            // FIX: Use router.replace with object syntax — consistent with dashboard "Add New"
-            // and the lastProcessedDraftId ref guard in add-screen.tsx.
-            // router.push with a string URL was unreliable across tab navigators.
             router.replace({
                 pathname: '/(screen-owner-tabs)/add-screen',
                 params: { draftId: item.id, timestamp: Date.now() }
@@ -108,13 +85,8 @@ export default function ScreenCard({ item, ownerTint }: ScreenCardProps) {
                     showsHorizontalScrollIndicator={false}
                     scrollEventThrottle={16}
                     onScroll={handleScroll}
-                    onScrollBeginDrag={() => { isManualScrolling.current = true; }}
-                    onMomentumScrollEnd={(e) => {
-                        isManualScrolling.current = false;
-                        const index = Math.round(e.nativeEvent.contentOffset.x / CARD_WIDTH);
-                        activeIndexRef.current = index;
-                        setActiveIndex(index);
-                    }}
+                    onScrollBeginDrag={onScrollBeginDrag}
+                    onMomentumScrollEnd={onMomentumScrollEnd}
                     directionalLockEnabled
                     bounces={false}
                     style={{ width: CARD_WIDTH }}

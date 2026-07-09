@@ -4,14 +4,13 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SupportButtonProps {
     label: string;
-    iconName: any;
-    isBug?: boolean;
+    icon: React.ReactNode;
     bgColor: string;
     tintColor: string;
     onPress?: () => void;
 }
 
-export default function SupportButton({ label, iconName, isBug, bgColor, tintColor, onPress }: SupportButtonProps) {
+export default function SupportButton({ label, icon, bgColor, tintColor, onPress }: SupportButtonProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
 
@@ -23,11 +22,7 @@ export default function SupportButton({ label, iconName, isBug, bgColor, tintCol
         >
             <View style={styles.leftContent}>
                 <View style={styles.iconWrapper}>
-                    {isBug ? (
-                        <MaterialCommunityIcons name={iconName} size={isTablet ? 24 : 20} color={tintColor} />
-                    ) : (
-                        <Ionicons name={iconName} size={isTablet ? 24 : 20} color={tintColor} />
-                    )}
+                    {icon}
                 </View>
                 <Text style={[styles.label, { color: '#3B242A', fontSize: isTablet ? 18 : 16 }]}>
                     {label}

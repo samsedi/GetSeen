@@ -48,17 +48,12 @@ export default function ProfileHeader({ title, tintColor, onMenuPress, onSetting
                     <Ionicons name="arrow-back" size={isTablet ? 22 : 20} color={activeTint} />
                 </TouchableOpacity>
 
-
-                <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
-
-                {/* RIGHT: Settings */}
-                <TouchableOpacity
-                    onPress={onSettingsPress}
-                    style={styles.iconButton}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons name="settings-outline" size={isTablet ? 30 : 24} color={activeTint} />
-                </TouchableOpacity>
+                <View style={styles.titleContainer}>
+                    <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+                </View>
+                
+                {/* Empty view to balance the flex space if we use space-between, but better to use absolute positioning for back button or flex 1 for title container */}
+                <View style={styles.rightPlaceholder} />
             </View>
         </View>
     );
@@ -67,7 +62,7 @@ export default function ProfileHeader({ title, tintColor, onMenuPress, onSetting
 const createStyles = (isTablet: boolean, theme: any, insetTop: number) => StyleSheet.create({
     container: {
         backgroundColor: theme.background,
-        paddingTop: Platform.OS === 'ios' ? insetTop + 10 : 20,
+        paddingTop: insetTop + (Platform.OS === 'ios' ? 10 : 16),
         paddingBottom: isTablet ? 16 : 12,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: theme.textSecondary + '20', // Very subtle divider
@@ -80,17 +75,28 @@ const createStyles = (isTablet: boolean, theme: any, insetTop: number) => StyleS
         paddingHorizontal: isTablet ? 20 : 16,
     },
     menuCircle: {
-
-
-
-        borderStyle: 'dashed',
+        width: 40,
+        height: 40,
         justifyContent: 'center',
+        alignItems: 'flex-start', // Align to left since it's the start
+        zIndex: 1,
+    },
+    titleContainer: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
         alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 0,
     },
     title: {
         fontSize: isTablet ? 25: 16,
         fontWeight: '900',
         letterSpacing: -0.5,
+    },
+    rightPlaceholder: {
+        width: 40,
+        height: 40,
     },
     iconButton: {
         padding: 3,

@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import {
-    StyleSheet,
-    Text,
-    View,
-    Modal,
-    TouchableOpacity,
-    FlatList,
-    Pressable
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useState } from 'react';
+import {
+    FlatList,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 export default function reservenow({ visible, onClose, packages, theme, isTablet }: any) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -81,7 +81,7 @@ export default function reservenow({ visible, onClose, packages, theme, isTablet
                             onClose();
                         }}
                     >
-                        <Ionicons name="cart-outline" size={20} color="white" style={{marginRight: 8}} />
+                        <Ionicons name="cart-outline" size={20} color="white" style={{ marginRight: 8 }} />
                         <Text style={styles.addBtnText}>Add to Cart</Text>
                     </TouchableOpacity>
                 </View>

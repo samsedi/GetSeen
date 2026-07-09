@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
     StyleSheet,
     View,
@@ -6,65 +6,138 @@ import {
     Text,
     TouchableOpacity,
     useWindowDimensions,
-    useColorScheme
+    useColorScheme,
+    ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
-import { useAppTheme } from '@/constants/theme';
-import { useRouter } from "expo-router";
+import { Colors } from '@/constants/theme';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import ProfileHeader from '@/components/ProfileScreenComponents/ProfileHeader';
 import ProfileHero from '@/components/ProfileScreenComponents/ProfileHero';
 import ProfileInfoTile from '@/components/ProfileScreenComponents/ProfileInfoTile';
 import SupportButton from '@/components/ProfileScreenComponents/SupportButton';
 
+import { fetchProfile, ProfileData } from '@/api/profileService';
+import { useDashboard } from '@/hooks/useDashboard';
+
 export default function OwnerProfileScreen() {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
-    const theme = useAppTheme();
-    const router = useRouter();
+    const colorScheme = useColorScheme() ?? 'light';
+    const theme = Colors[colorScheme];
 
-    const { logout } = useAuthStore();
+    const router = useRouter();
+    const { logout, role } = useAuthStore();
     const ownerTint = theme.brandNavy;
 
-    const styles = useMemo(() => createStyles(isTablet, theme, ownerTint), [isTablet, theme, ownerTint]);
+    const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
+    
+    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { stats, loading: dashboardLoading } = useDashboard();
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadProfile = async () => {
+                try {
+                    const data = await fetchProfile(role || 'owner');
+                    setProfile(data);
+                } catch (error) {
+                    console.error("Failed to load profile", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadProfile();
+        }, [role])
+    );
+
+    const companyName = profile?.companyName || 'Loading...';
+    const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.companyName || 'Owner') + "&background=random";
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
             <ProfileHeader title="Profile" tintColor={ownerTint} />
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                <ProfileHero
-                    name="Silverbird Venues"
-                    company="Screen Network Owner"
-                    imageUrl="https://images.unsplash.com/photo-1556761175-5973dc0f32b7?q=80&w=1632&auto=format&fit=crop"
-                    tintColor={ownerTint}
-                />
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {loading ? (
+                    <ActivityIndicator size="large" color={ownerTint} style={{ marginTop: 20 }} />
+                ) : (
+                    <>
+                        <ProfileHero
+                            name={companyName}
+                            company="Screen Network Owner"
+                            imageUrl={avatarUrl}
+                            tintColor={ownerTint}
+                            onEditPress={() => router.push('/profile-subscreens/owner-edit')}
+                        />
 
-                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24 }]}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Venue Details</Text>
-                        <TouchableOpacity activeOpacity={0.6}>
-                            <Text style={[styles.editText, { color: ownerTint }]}>EDIT</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24 }]}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={[styles.sectionTitle, { color: theme.text }]}>Business Info</Text>
+                                <TouchableOpacity activeOpacity={0.6} onPress={() => router.push('/profile-subscreens/owner-edit')}>
+                                    <Text style={[styles.editText, { color: ownerTint }]}>EDIT</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                    <View style={[styles.infoCard, { backgroundColor: theme.cardSoft }]}>
-                        <View style={styles.infoRow}>
-                            <ProfileInfoTile
-                                label="Verification"
-                                value="Verified Venue"
-                                icon={<Ionicons name="checkmark-circle" size={18} color={theme.success} />}
-                            />
-                            <ProfileInfoTile label="Bank Details" value="GTBank •••• 4590" />
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Industry" value={profile?.industry || 'Not set'} />
+                                    <ProfileInfoTile label="Reg No" value={profile?.businessRegNo || profile?.taxId || 'Not set'} />
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile
+                                        label="Verification"
+                                        value="Verified Partner"
+                                        icon={<Ionicons name="shield-checkmark" size={18} color="#1E7E34" />}
+                                    />
+                                    <ProfileInfoTile label="Phone" value={profile?.phoneNumber || 'Not set'} />
+                                </View>
+                            </View>
+
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 24, marginBottom: 16 }]}>Bank Details</Text>
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Bank Name" value={profile?.bankName || 'Not set'} />
+                                    <ProfileInfoTile label="Account No" value={profile?.accountNumber || 'Not set'} />
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Account Name" value={profile?.accountName || 'Not set'} />
+                                    <ProfileInfoTile label="Total Screens" value={dashboardLoading ? "Loading..." : `${stats.activeScreens} Active`} />
+                                </View>
+                            </View>
+
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 24, marginBottom: 16 }]}>Social Media</Text>
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Instagram" value={profile?.instagram ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-instagram" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="Facebook" value={profile?.facebook ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-facebook" size={18} color={theme.tint} />} />
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="TikTok" value={profile?.tiktok ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-tiktok" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="" value="" />
+                                </View>
+                            </View>
                         </View>
-                        <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
-                        <View style={styles.infoRow}>
-                            <ProfileInfoTile label="Total Screens" value="12 Active" />
-                            <ProfileInfoTile label="Location" value="Lagos, Nigeria" />
-                        </View>
-                    </View>
-                </View>
+                    </>
+                )}
 
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
                     <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
@@ -72,26 +145,28 @@ export default function OwnerProfileScreen() {
                     </Text>
 
                     <SupportButton
-                        label="Report an Issue"
-                        iconName="ladybug"
-                        isBug={true}
-                        bgColor={theme.errorSoft}
+                        label="Partner Support"
+                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        bgColor={colorScheme === 'dark' ? '#1E2430' : '#EAEFF8'}
                         tintColor={ownerTint}
-                        onPress={() => console.log("Report Issue")}
+                        onPress={() => router.push("/profile-subscreens/support")}
                     />
 
                     <SupportButton
-                        label="Help Center"
-                        iconName="help-circle-outline"
-                        bgColor={theme.secondaryBg}
+                        label="Give Feedback"
+                        icon={<Ionicons name="chatbubble-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
                         tintColor={ownerTint}
-                        onPress={() => console.log("Help Center")}
+                        onPress={() => router.push("/profile-subscreens/feedback")}
                     />
                 </View>
 
                 <TouchableOpacity
                     style={[styles.logoutBtn, { borderColor: ownerTint + '30' }]}
-                    onPress={() => router.push("/(auth)/roles")}
+                    onPress={() => {
+                        logout();
+                        router.push("/(auth)/roles");
+                    }}
                     activeOpacity={0.7}
                 >
                     <Ionicons name="log-out-outline" size={20} color={ownerTint} />
@@ -103,7 +178,7 @@ export default function OwnerProfileScreen() {
     );
 }
 
-const createStyles = (isTablet: boolean, theme: any, ownerTint: string) => StyleSheet.create({
+const createStyles = (isTablet: boolean, theme: any) => StyleSheet.create({
     container: { flex: 1 },
     scrollContent: { paddingBottom: 120 },
     section: { marginTop: 35 },

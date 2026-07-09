@@ -20,21 +20,21 @@ interface CampaignSidebarProps {
 export default function CampaignSidebar({ selectedType, onSelectType, isExpanded, onToggle }: CampaignSidebarProps) {
     const theme = useAppTheme();
     const insets = useSafeAreaInsets();
-    
+
     return (
         <View style={[
-            styles.sidebar, 
-            { 
-                backgroundColor: theme.card, 
+            styles.sidebar,
+            {
+                backgroundColor: theme.card,
                 borderColor: theme.border,
-                marginTop: Platform.OS === 'ios' ? insets.top + 10 : 42 
+                marginTop: Platform.OS === 'ios' ? insets.top + 10 : 42
             }
         ]}>
             {/* TOGGLE BUTTON */}
             <TouchableOpacity onPress={onToggle} style={[styles.toggleBtn, { backgroundColor: theme.border }]} activeOpacity={0.7}>
                 <Ionicons name="menu-outline" size={24} color={theme.text} />
             </TouchableOpacity>
-            
+
             {isExpanded && (
                 <>
                     {/* DIVIDER */}
@@ -45,7 +45,7 @@ export default function CampaignSidebar({ selectedType, onSelectType, isExpanded
                         {CAMPAIGN_TYPES.map((type) => {
                             const isActive = selectedType === type.id;
                             return (
-                                <SidebarIcon 
+                                <SidebarIcon
                                     key={type.id}
                                     type={type}
                                     isActive={isActive}
@@ -64,6 +64,9 @@ export default function CampaignSidebar({ selectedType, onSelectType, isExpanded
 function SidebarIcon({ type, isActive, theme, onSelect }: any) {
     const [isHovered, setIsHovered] = useState(false);
 
+    // Explicitly defining your exact pink here to guarantee it renders
+    const PROMO_PINK = '#D11243';
+
     return (
         <View style={{ zIndex: isHovered ? 99 : 1 }}>
             <Pressable
@@ -74,17 +77,17 @@ function SidebarIcon({ type, isActive, theme, onSelect }: any) {
                 onPressOut={() => setIsHovered(false)}
                 onPress={onSelect}
                 style={[
-                    styles.sidebarItem, 
-                    isActive && { backgroundColor: theme.promoPink + '15' }
+                    styles.sidebarItem,
+                    isActive && { backgroundColor: PROMO_PINK + '15' } // 15 adds a slight opacity to the pink background
                 ]}
             >
-                <Ionicons 
-                    name={type.icon as any} 
-                    size={22} 
-                    color={isActive ? theme.promoPink : theme.textSecondary} 
+                <Ionicons
+                    name={type.icon as any}
+                    size={22}
+                    color={isActive ? PROMO_PINK : theme.textSecondary}
                 />
             </Pressable>
-            
+
             {/* TOOLTIP */}
             {isHovered && (
                 <View style={[styles.tooltip, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -97,8 +100,8 @@ function SidebarIcon({ type, isActive, theme, onSelect }: any) {
 
 const styles = StyleSheet.create({
     sidebar: {
-        width: 55, 
-        borderRadius: 30, 
+        width: 55,
+        borderRadius: 30,
         alignItems: 'center',
         paddingVertical: 12,
         marginHorizontal: 16,
@@ -113,7 +116,7 @@ const styles = StyleSheet.create({
     toggleBtn: {
         width: 36,
         height: 36,
-        borderRadius: 18, // Perfectly round background
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
     },

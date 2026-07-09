@@ -1,57 +1,63 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, Platform, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, Typography } from '@/constants/theme';
 import CampaignCard from '@/components/CampaignComponents/CampaignCard';
-
-const MOCK_CAMPAIGNS = [
-    {
-        id: '1',
-        name: 'The Palms Mall Main Screen',
-        package: 'Premium Visibility',
-        price: '250,000',
-        status: 'Active',
-        image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1470&auto=format&fit=crop',
-    },
-    {
-        id: '2',
-        name: 'Silverbird Cinemas Entry',
-        package: 'Standard Loop',
-        price: '120,000',
-        status: 'Pending',
-        image: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=1459&auto=format&fit=crop',
-    },
-    {
-        id: '3',
-        name: 'Ikeja City Mall Totem',
-        package: 'Gold Package',
-        price: '450,000',
-        status: 'Scheduled',
-        image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=1474&auto=format&fit=crop',
-    }
-];
+import { fetchMyCampaigns, CampaignData } from '@/api/campaignService';
 
 const CAMPAIGN_CATEGORIES = [
     { id: 'All', label: 'All', icon: 'layers-outline' },
-    { id: 'Active', label: 'Active', icon: 'play-circle-outline' },
-    { id: 'Pending', label: 'Pending', icon: 'time-outline' },
-    { id: 'Scheduled', label: 'Scheduled', icon: 'calendar-outline' },
+    { id: 'ACTIVE', label: 'Active', icon: 'play-circle-outline' },
+    { id: 'PENDING', label: 'Pending', icon: 'time-outline' },
+    { id: 'SCHEDULED', label: 'Scheduled', icon: 'calendar-outline' },
 ];
 
 export default function DigitalScreensCampaign() {
     const theme = useAppTheme();
     const insets = useSafeAreaInsets();
     const [selectedTab, setSelectedTab] = useState('All');
+    const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const hasCampaigns = MOCK_CAMPAIGNS.length > 0;
+    useEffect(() => {
+        const loadCampaigns = async () => {
+            try {
+                const data = await fetchMyCampaigns();
+                setCampaigns(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Failed to load campaigns", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadCampaigns();
+    }, []);
+
+    const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
+    const filteredCampaigns = safeCampaigns.filter(c => 
+        selectedTab === 'All' ? true : c.status === selectedTab
+    );
+
+    // Map backend data to the format expected by CampaignCard
+    const mappedCampaigns = filteredCampaigns.map(c => ({
+        id: c.id,
+        name: c.screen?.name || 'Unknown Screen',
+        package: c.screen?.screenType || 'Digital Screen',
+        price: c.pricePaid ? c.pricePaid.toLocaleString() : '0',
+        status: c.status,
+        image: c.mediaUrl || 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1470&auto=format&fit=crop',
+    }));
+
+    const hasCampaigns = mappedCampaigns.length > 0;
     const styles = useMemo(() => createStyles(theme, insets), [theme, insets]);
 
     return (
         <View style={styles.mainContent}>
             {/* HEADER */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Campaigns</Text>
+                <View style={{ width: 45 }} />
+                <Text style={styles.headerTitle}>Digital screens</Text>
                 <TouchableOpacity style={styles.iconCircle}>
                     <Ionicons name="search-outline" size={20} color={theme.text} />
                 </TouchableOpacity>
@@ -78,9 +84,13 @@ export default function DigitalScreensCampaign() {
             </View>
 
             {/* LIST OR EMPTY STATE */}
-            {hasCampaigns ? (
+            {loading ? (
+                <View style={[styles.emptyContainer, { marginTop: 0 }]}>
+                    <ActivityIndicator size="large" color={theme.tint} />
+                </View>
+            ) : hasCampaigns ? (
                 <FlatList
-                    data={MOCK_CAMPAIGNS}
+                    data={mappedCampaigns}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
@@ -111,25 +121,20 @@ export default function DigitalScreensCampaign() {
 const createStyles = (theme: any, insets: any) => StyleSheet.create({
     mainContent: { flex: 1 },
     header: {
-        paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 42,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? 10 : 16),
         flexDirection: 'row',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingBottom: 10,
-        minHeight: 50 + (Platform.OS === 'ios' ? insets.top : 42),
+        paddingBottom: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.textSecondary + '20',
     },
     headerTitle: { 
-        ...Typography.h2, 
         color: theme.text, 
-        fontSize: 20, 
-        fontWeight: '800',
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        top: Platform.OS === 'ios' ? insets.top + 20 : 52,
-        zIndex: -1
+        fontSize: 16, 
+        fontWeight: '900',
+        letterSpacing: -0.5,
     },
     iconCircle: {
         width: 45, height: 45, borderRadius: 22.5, backgroundColor: theme.card,

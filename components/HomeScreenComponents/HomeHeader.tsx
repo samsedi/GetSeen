@@ -7,16 +7,23 @@ import {
     Text,
     useWindowDimensions,
     useColorScheme,
-    Platform
+    Platform,
+    StatusBar
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCartStore } from '@/store/useCartStore';
 
 type Theme = typeof Colors.light;
 
-export default function HomeHeader() {
+interface HomeHeaderProps {
+    searchQuery: string;
+    setSearchQuery: (query: string) => void;
+}
+
+export default function HomeHeader({ searchQuery, setSearchQuery }: HomeHeaderProps) {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
 
@@ -24,10 +31,15 @@ export default function HomeHeader() {
     const isTablet = width >= 600;
     const router = useRouter();
 
+    const cartCount = useCartStore((state) => state.items?.length || 0);
+
     // 2. Get the exact height of the device's status bar/notch
     const insets = useSafeAreaInsets();
 
-    const handleNavigation = () => router.push('/homeSubScreens/wishlist');
+    const handleNavigationToWishlist = () => router.push('/homeSubScreens/wishlist');
+    const handleNavigationToCart = ()=> router.push(
+        '/homeSubScreens/cartscreen'
+    )
 
     // 3. Pass insets.top into the style factory so it recalculates if the screen rotates
     const styles = useMemo(
@@ -51,20 +63,24 @@ export default function HomeHeader() {
                         placeholder="Search specific location or venue"
                         placeholderTextColor="rgba(255,255,255,0.5)"
                         style={styles.searchInput}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
                     />
                 </View>
 
                 {/* RIGHT: Actions */}
                 <View style={styles.rightActions}>
-                    <TouchableOpacity style={[styles.iconCircle, styles.cartMargin]} >
+                    <TouchableOpacity style={[styles.iconCircle, styles.cartMargin]} onPress={handleNavigationToCart} >
                         <Ionicons name="cart-outline" size={isTablet ? 20 : 16} color="white" />
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>12</Text>
-                        </View>
+                        {cartCount > 0 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{cartCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
 
                     {/* Heart Circle - Centered */}
-                    <TouchableOpacity style={styles.profileCircle} onPress={handleNavigation}>
+                    <TouchableOpacity style={styles.profileCircle} onPress={handleNavigationToWishlist}>
                         <Ionicons
                             name="heart-outline"
                             size={isTablet ? 22 : 20}
@@ -80,11 +96,13 @@ export default function HomeHeader() {
 
 
 const createStyles = (isTablet: boolean, theme: Theme, insetTop: number) => {
+    const androidPadding = Math.max(insetTop, StatusBar.currentHeight || 24) + 15;
+    const iosPadding = Math.max(insetTop, 20) + 10;
+
     return StyleSheet.create({
         container: {
             backgroundColor: theme.brandNavy,
-            // 5. Use the exact inset for iOS + 10px breathing room. Keep Android at 42.
-            paddingTop: Platform.OS === 'ios' ? Math.max(insetTop, 20) + 10 : 42,
+            paddingTop: Platform.OS === 'ios' ? iosPadding : androidPadding,
             paddingHorizontal: isTablet ? 20 : 12,
             paddingBottom: 20,
             borderBottomLeftRadius: 32,

@@ -10,6 +10,8 @@ export default function AuthScreensLayout() {
             <Stack.Screen name="advertiser-auth" options={{ headerShown: false }} />
             <Stack.Screen name="screenowner-auth" options={{ headerShown: false }} />
             <Stack.Screen name="forgotpassword" options={{ headerShown: false }} />
+            <Stack.Screen name="forgotpassword-screenowner" options={{ headerShown: false }}/>
+            <Stack.Screen name="verify-otp" options={{headerShown:false}}/>
         </Stack>
     );
 }

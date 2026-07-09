@@ -13,7 +13,7 @@ export default function GeoReachCampaign() {
         <View style={styles.mainContent}>
             {/* HEADER */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>GeoReach Campaigns</Text>
+                <Text style={styles.headerTitle}>GeoReach</Text>
             </View>
 
             {/* EMPTY STATE */}
@@ -34,22 +34,17 @@ export default function GeoReachCampaign() {
 const createStyles = (theme: any, insets: any) => StyleSheet.create({
     mainContent: { flex: 1 },
     header: {
-        paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 42,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? 10 : 16),
         flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-        paddingHorizontal: 20, paddingBottom: 10,
-        minHeight: 50 + (Platform.OS === 'ios' ? insets.top : 42),
+        paddingHorizontal: 20, paddingBottom: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.textSecondary + '20',
     },
     headerTitle: { 
-        ...Typography.h2, 
         color: theme.text, 
-        fontSize: 20, 
-        fontWeight: '800',
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        top: Platform.OS === 'ios' ? insets.top + 20 : 52,
-        zIndex: -1
+        fontSize: 16, 
+        fontWeight: '900',
+        letterSpacing: -0.5,
     },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, marginTop: -60 },
     illustrationCard: { width: 280, height: 280, backgroundColor: theme.card, borderRadius: 30, padding: 20, marginBottom: 35, borderWidth: 1, borderColor: theme.border },

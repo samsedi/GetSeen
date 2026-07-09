@@ -1,76 +1,45 @@
-import {useState} from "react";
-import { useAppTheme } from '@/constants/theme';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useColorScheme,
-    useWindowDimensions,
-    View,
-    Alert,
-    ActivityIndicator
+    StyleSheet, View, ScrollView, TouchableOpacity,
+    Text, useColorScheme, useWindowDimensions, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import authApi from '@/api/authService';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 
-import AuthInputField from '@/components/AuthComponents/AuthInputField';
+import { useAppTheme } from '@/constants/theme';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
+import AuthInputField from '@/components/AuthComponents/AuthInputField';
+
+import { useForgotPassword } from '@/hooks/useForgotPassword';
 
 export default function ForgotPasswordScreenOwner() {
-    const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    // ─── Logic (same hook — only the accent colour differs from advertiser version) ──
+    const {
+        email, error, loading, isButtonDisabled,
+        handleEmailChange, handleSendResetLink, goBack,
+    } = useForgotPassword();
 
+    // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
     const colorScheme = useColorScheme() ?? 'light';
     const theme = useAppTheme();
-    const router = useRouter();
 
+    // Screen owner uses navy blue instead of pink
     const brandBlue = theme.brandNavy;
-
-    const handleSendResetLink = async () => {
-        const cleanEmail = email.trim().toLowerCase();
-        if (!cleanEmail) {
-            Alert.alert("Required", "Please enter your email address.");
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            await authApi.forgotPassword(cleanEmail);
-            Alert.alert(
-                "Link Sent",
-                "If an account exists for this email, we have sent a password reset link. Please check your inbox.",
-                [{ text: "Back to Sign In", onPress: () => router.back() }]
-            );
-        } catch (error: any) {
-            console.log("Forgot Password Error:", error.response?.data);
-            const data = error.response?.data;
-            const errorMsg = data?.message || data?.error || "Unable to process request.";
-            Alert.alert("Error", errorMsg);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const errorRed = '#FF3B30';
+    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
 
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')
         : require('@/assets/images/getseen-light-removebg-preview.png');
 
+    // ─── Render ────────────────────────────────────────────────────────────
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-
             <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    style={styles.backButton}
-                    activeOpacity={0.7}
-                >
+                <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7} disabled={loading}>
                     <Ionicons name="arrow-back" size={24} color={brandBlue} />
                 </TouchableOpacity>
 
@@ -84,12 +53,11 @@ export default function ForgotPasswordScreenOwner() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
                 <AuthPromoCard
                     title="Reset Password"
                     subtitle="Enter the email address linked to your venue account and we'll send you a secure reset link."
-                    bgColor={theme.promoPink}
-                    iconName="tv-outline"
+                    bgColor="#D11243"
+                    iconName="lock-closed-outline"
                 />
 
                 <View style={styles.formContainer}>
@@ -98,25 +66,29 @@ export default function ForgotPasswordScreenOwner() {
                         placeholder="name@venuebusiness.com"
                         keyboardType="email-address"
                         autoCapitalize="none"
-                        accentColor={brandBlue}
                         value={email}
-                        onChangeText={setEmail}
-                        editable={!isLoading}
+                        onChangeText={handleEmailChange}
+                        editable={!loading}
+                        borderColor={error ? errorRed : theme.border}
+                        inputBgColor={inputBg}
+                        labelColor={theme.text}
+                        textColor={theme.text}
+                        accentColor={error ? errorRed : brandBlue}
                     />
 
                     <TouchableOpacity
-                        style={[styles.mainBtn, { backgroundColor: brandBlue, opacity: isLoading ? 0.6 : 1 }]}
+                        style={[styles.mainBtn, { backgroundColor: brandBlue }, isButtonDisabled && { opacity: 0.6 }]}
                         onPress={handleSendResetLink}
                         activeOpacity={0.85}
-                        disabled={isLoading}
+                        disabled={isButtonDisabled}
                     >
-                        {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.mainBtnText}>Send Reset Link</Text>}
+                        {loading
+                            ? <ActivityIndicator color="white" />
+                            : <Text style={styles.mainBtnText}>Send Reset Link</Text>
+                        }
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.backToLoginBtn}
-                        onPress={() => router.back()}
-                    >
+                    <TouchableOpacity style={styles.backToLoginBtn} onPress={goBack} disabled={loading}>
                         <Text style={[styles.backToLoginText, { color: theme.textSecondary }]}>
                             Remember your password?{' '}
                             <Text style={{ color: brandBlue, fontWeight: '700' }}>Sign In</Text>
@@ -130,46 +102,13 @@ export default function ForgotPasswordScreenOwner() {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        height: 60,
-    },
-    backButton: {
-        padding: 5,
-        width: 40,
-    },
-    logoImage: {
-        height: 35,
-    },
-    scrollContent: {
-        paddingHorizontal: 24,
-        paddingBottom: 40
-    },
-    formContainer: {
-        marginTop: 40
-    },
-    mainBtn: {
-        height: 56,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 2,
-        marginTop: 10
-    },
-    mainBtnText: {
-        color: 'white',
-        fontWeight: '700',
-        fontSize: 16
-    },
-    backToLoginBtn: {
-        marginTop: 24,
-        alignItems: 'center',
-    },
-    backToLoginText: {
-        fontSize: 14,
-    }
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10, height: 60 },
+    backButton: { padding: 5, width: 40 },
+    logoImage: { height: 35 },
+    scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
+    formContainer: { marginTop: 40 },
+    mainBtn: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', elevation: 2, marginTop: 10 },
+    mainBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
+    backToLoginBtn: { marginTop: 24, alignItems: 'center' },
+    backToLoginText: { fontSize: 14 },
 });

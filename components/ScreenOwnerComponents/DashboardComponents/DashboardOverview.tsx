@@ -1,8 +1,13 @@
 import { AppTheme, Typography, useAppTheme } from '@/constants/theme';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { DashboardOverviewStats } from '@/hooks/useDashboard';
 
-export default function DashboardOverview() {
+interface DashboardOverviewProps {
+    stats: DashboardOverviewStats;
+}
+
+export default function DashboardOverview({ stats }: DashboardOverviewProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
 
@@ -17,24 +22,24 @@ export default function DashboardOverview() {
             <View style={styles.gridContainer}>
                 <View style={styles.row}>
                     <View style={[styles.card, styles.halfWidthCard]}>
-                        <Text style={styles.metricValue}>0</Text>
+                        <Text style={styles.metricValue}>{stats.activeScreens}</Text>
                         <Text style={styles.metricLabel}>Active Screens</Text>
                     </View>
 
                     <View style={[styles.card, styles.halfWidthCard]}>
-                        <Text style={styles.metricValue}>₦0.00</Text>
+                        <Text style={styles.metricValue}>{stats.totalEarnings}</Text>
                         <Text style={styles.metricLabel}>Total Earnings</Text>
                     </View>
                 </View>
 
                 <View style={[styles.row, { marginTop: 12 }]}>
                     <View style={[styles.card, styles.halfWidthCard]}>
-                        <Text style={styles.metricValue}>₦0.00</Text>
+                        <Text style={styles.metricValue}>{stats.totalPaid}</Text>
                         <Text style={styles.metricLabel}>Total Paid</Text>
                     </View>
 
                     <View style={[styles.card, styles.halfWidthCard]}>
-                        <Text style={styles.metricValue}>₦0.00</Text>
+                        <Text style={styles.metricValue}>{stats.pendingPayout}</Text>
                         <Text style={styles.metricLabel}>Pending Payout</Text>
                     </View>
                 </View>

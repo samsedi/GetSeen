@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import {
     StyleSheet,
     Text,
@@ -8,55 +8,36 @@ import {
     FlatList,
     Pressable,
     ScrollView,
-    Alert,
     Platform,
     useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { LocationItem, Package } from '@/constants/mockData';
 
-
-
-const formatDate = (date: Date): string => {
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    const yyyy = date.getFullYear();
-    return `${mm}/${dd}/${yyyy}`;
-};
-
-const addDays = (date: Date, days: number): Date => {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-};
-
-
+// ✨ Real backend type and global store
+import { ScreenResponseDto } from '@/api/screenService';
+import { usePackageSelectionModal, GeneratedPackage } from '@/hooks/usePackageSelectionModal';
 
 interface PackageSelectionModalProps {
     visible: boolean;
     onClose: () => void;
-    item: LocationItem | null;
+    item: ScreenResponseDto | null;
     theme: any;
     isTablet: boolean;
 }
 
-
-
-const keyExtractor = (pkg: Package) => pkg.id;
-
-
+const keyExtractor = (pkg: GeneratedPackage) => pkg.id;
 
 const PackageCard = memo(function PackageCard({
-                                                  pkg,
-                                                  isSelected,
-                                                  onSelect,
-                                                  theme,
-                                                  isLandscape,
-                                                  isTablet,
-                                              }: {
-    pkg: Package;
+                                                   pkg,
+                                                   isSelected,
+                                                   onSelect,
+                                                   theme,
+                                                   isLandscape,
+                                                   isTablet,
+                                               }: {
+    pkg: GeneratedPackage;
     isSelected: boolean;
     onSelect: (id: string) => void;
     theme: any;
@@ -134,7 +115,6 @@ const PackageCard = memo(function PackageCard({
     );
 });
 
-
 export default memo(function PackageSelectionModal({
                                                        visible,
                                                        onClose,
@@ -142,59 +122,37 @@ export default memo(function PackageSelectionModal({
                                                        theme,
                                                        isTablet,
                                                    }: PackageSelectionModalProps) {
-
     const { width, height } = useWindowDimensions();
     const isLandscape = width > height;
 
     const sheetMaxHeight = isLandscape
-        ? height * 0.95          // almost full height in landscape (height is small)
-        : height * 0.92;         // standard bottom sheet in portrait
-
+        ? height * 0.95
+        : height * 0.92;
 
     const sheetWidth = isTablet || isLandscape
-        ? Math.min(width, 640)   // max 640px wide, centred
+        ? Math.min(width, 640)
         : '100%';
 
-    // ── State ───────────────────────────────────────────────────────────────
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [startDate, setStartDate] = useState<Date>(new Date());
-    const [showPicker, setShowPicker] = useState(false);
-
-    const itemId = item?.id;
-
-    useEffect(() => {
-        if (item?.packages?.length) {
-            setSelectedId(item.packages[0].id);
-            setStartDate(new Date());
-        }
-    }, [itemId]);
-
-    const selectedPkg = useMemo(
-        () => item?.packages?.find((p) => p.id === selectedId) ?? null,
-        [item, selectedId],
-    );
-
-    const endDate = selectedPkg
-        ? addDays(startDate, selectedPkg.days)
-        : addDays(startDate, 1);
-
-
-    const handleDateChange = useCallback((_: any, date?: Date) => {
-        if (Platform.OS === 'android') setShowPicker(false);
-        if (date) setStartDate(date);
-    }, []);
-
-    const handleAddToCart = useCallback(() => {
-        if (!item || !selectedPkg) return;
-        Alert.alert(
-            'Added to Cart',
-            `${selectedPkg.emoji} ${selectedPkg.name} for ${item.name} has been added to your campaign.\n\n📅 ${formatDate(startDate)} → ${formatDate(endDate)}`,
-        );
-        onClose();
-    }, [selectedId, item, selectedPkg, onClose, startDate, endDate]);
+    const {
+        selectedId,
+        setSelectedId,
+        startDate,
+        showPicker,
+        setShowPicker,
+        derivedPackages,
+        selectedPkg,
+        endDate,
+        quantity,
+        incrementQuantity,
+        decrementQuantity,
+        handleDateChange,
+        handleAddToCart,
+        formatDate,
+        isAlreadyInCart,
+    } = usePackageSelectionModal(item, onClose);
 
     const renderItem = useCallback(
-        ({ item: pkg }: { item: Package }) => (
+        ({ item: pkg }: { item: GeneratedPackage }) => (
             <PackageCard
                 pkg={pkg}
                 isSelected={selectedId === pkg.id}
@@ -227,16 +185,11 @@ export default memo(function PackageSelectionModal({
             transparent
             animationType="slide"
             onRequestClose={onClose}
-            // Ensures the modal re-evaluates layout on rotation
             supportedOrientations={['portrait', 'landscape']}
         >
             <Pressable style={styles.overlay} onPress={onClose}>
                 <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
 
-                {/*
-                 * Landscape / tablet: centre the sheet horizontally so it
-                 * doesn't stretch the full width of the screen.
-                 */}
                 <View
                     style={[
                         styles.sheetWrapper,
@@ -255,7 +208,6 @@ export default memo(function PackageSelectionModal({
                                 width: sheetWidth,
                                 padding: sheetPadding,
                                 paddingBottom: sheetPaddingBottom,
-                                // Tablet / landscape: round all corners, not just top
                                 borderRadius: isTablet || isLandscape ? 28 : undefined,
                                 borderTopLeftRadius: isTablet || isLandscape ? 28 : 35,
                                 borderTopRightRadius: isTablet || isLandscape ? 28 : 35,
@@ -293,14 +245,9 @@ export default memo(function PackageSelectionModal({
                             keyboardShouldPersistTaps="handled"
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {/*
-                             * Landscape: render package cards in a 2-column grid
-                             * so the list doesn't require scrolling just to see all options.
-                             * Portrait / tablet: normal single-column FlatList.
-                             */}
                             {isLandscape ? (
                                 <View style={styles.landscapeGrid}>
-                                    {(item.packages || []).map((pkg) => (
+                                    {derivedPackages.map((pkg) => (
                                         <View key={pkg.id} style={styles.landscapeCardWrapper}>
                                             <PackageCard
                                                 pkg={pkg}
@@ -315,7 +262,7 @@ export default memo(function PackageSelectionModal({
                                 </View>
                             ) : (
                                 <FlatList
-                                    data={item.packages || []}
+                                    data={derivedPackages}
                                     keyExtractor={keyExtractor}
                                     renderItem={renderItem}
                                     showsVerticalScrollIndicator={false}
@@ -326,7 +273,6 @@ export default memo(function PackageSelectionModal({
                                     initialNumToRender={5}
                                 />
                             )}
-
 
                             <View
                                 style={[
@@ -397,9 +343,31 @@ export default memo(function PackageSelectionModal({
                                 </View>
 
                                 {selectedPkg && (
-                                    <Text style={[styles.durationHint, { color: theme.textSecondary, fontSize: isLandscape ? 11 : 12 }]}>
-                                        Campaign runs for {selectedPkg.days} day{selectedPkg.days > 1 ? 's' : ''}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+                                        <Text style={[styles.durationHint, { color: theme.textSecondary, fontSize: isLandscape ? 12 : 14, marginTop: 0 }]}>
+                                            Duration ({selectedPkg.name}):
+                                        </Text>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                            <TouchableOpacity 
+                                                onPress={decrementQuantity} 
+                                                disabled={quantity <= 1}
+                                                style={{ backgroundColor: theme.background, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.border, opacity: quantity <= 1 ? 0.4 : 1 }}
+                                            >
+                                                <Ionicons name="remove" size={18} color={theme.text} />
+                                            </TouchableOpacity>
+                                            <View style={{ minWidth: 60, alignItems: 'center' }}>
+                                                <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>
+                                                    {quantity} {quantity === 1 ? (selectedPkg.id === 'daily' ? 'Day' : selectedPkg.id === 'weekly' ? 'Week' : 'Month') : (selectedPkg.id === 'daily' ? 'Days' : selectedPkg.id === 'weekly' ? 'Weeks' : 'Months')}
+                                                </Text>
+                                            </View>
+                                            <TouchableOpacity 
+                                                onPress={incrementQuantity}
+                                                style={{ backgroundColor: theme.background, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.border }}
+                                            >
+                                                <Ionicons name="add" size={18} color={theme.text} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
                                 )}
                             </View>
 
@@ -430,18 +398,20 @@ export default memo(function PackageSelectionModal({
                             style={[
                                 styles.mainActionBtn,
                                 { height: ctaHeight, marginTop: isLandscape ? 6 : 10 },
+                                isAlreadyInCart && { backgroundColor: theme.border }
                             ]}
-                            onPress={handleAddToCart}
+                            onPress={isAlreadyInCart ? undefined : handleAddToCart}
                             activeOpacity={0.85}
+                            disabled={isAlreadyInCart}
                         >
                             <Ionicons
-                                name="cart-outline"
+                                name={isAlreadyInCart ? "checkmark-circle" : "cart-outline"}
                                 size={isTablet ? 24 : isLandscape ? 18 : 20}
-                                color="white"
+                                color={isAlreadyInCart ? theme.textSecondary : "white"}
                                 style={{ marginRight: 10 }}
                             />
-                            <Text style={[styles.mainActionText, { fontSize: ctaFontSize }]}>
-                                Add to Campaign Cart
+                            <Text style={[styles.mainActionText, { fontSize: ctaFontSize, color: isAlreadyInCart ? theme.textSecondary : "white" }]}>
+                                {isAlreadyInCart ? "Already in Cart" : `Add to Cart • ₦${((selectedPkg?.basePrice || 0) * quantity).toLocaleString('en-NG')}`}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -451,25 +421,18 @@ export default memo(function PackageSelectionModal({
     );
 });
 
-
-
 const styles = StyleSheet.create({
     overlay: { flex: 1 },
-
-    // Sheet positioning wrappers
     sheetWrapper: {
         flex: 1,
     },
     sheetWrapperBottom: {
-        // Portrait: sheet sticks to the bottom (original behaviour)
         justifyContent: 'flex-end',
     },
     sheetWrapperCentered: {
-        // Landscape / tablet: centre vertically and horizontally
         justifyContent: 'center',
         alignItems: 'center',
     },
-
     sheet: {
         borderWidth: 1,
         shadowColor: '#000',
@@ -478,7 +441,6 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 20,
     },
-
     dragHandle: {
         width: 40,
         height: 5,
@@ -487,7 +449,6 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         marginBottom: 20,
     },
-
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -495,12 +456,8 @@ const styles = StyleSheet.create({
     },
     title: { fontWeight: '900', letterSpacing: -0.5 },
     subtitle: { marginTop: 2, fontWeight: '500' },
-
     scrollContent: { paddingBottom: 8 },
-
     listPadding: { paddingBottom: 4 },
-
-
     packageCard: { borderRadius: 20 },
     pkgHeader: {
         flexDirection: 'row',
@@ -511,13 +468,11 @@ const styles = StyleSheet.create({
     pkgName: { fontWeight: '800', flex: 1, marginRight: 8 },
     pkgPrice: { fontWeight: '900', color: '#FF2D55' },
     perDay: { fontSize: 11, fontWeight: '500', color: '#FF2D55' },
-
     featureRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
     },
-
     featuresWrap: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -527,8 +482,6 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     featureText: { fontWeight: '500' },
-
-
     landscapeGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -536,12 +489,9 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     landscapeCardWrapper: {
-
         flex: 1,
         minWidth: '30%',
     },
-
-
     mainActionBtn: {
         backgroundColor: '#FF2D55',
         borderRadius: 20,
@@ -571,8 +521,6 @@ const styles = StyleSheet.create({
     dateValue: { fontWeight: '700' },
     arrowIcon: { marginTop: 18 },
     durationHint: { fontWeight: '500', marginTop: 10 },
-
-
     iosDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 },
     iosDoneText: { color: '#FF2D55', fontWeight: '700', fontSize: 15 },
 });

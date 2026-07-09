@@ -11,32 +11,19 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, AppTheme } from '@/constants/theme';
 import { useReservationStore } from '@/store/useReservationStore';
-import { LocationItem } from '@/constants/mockData';
+import { ScreenResponseDto } from '@/api/screenService';
 
-// Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 interface Props {
     isTablet: boolean;
-    data: LocationItem;
+    data: ScreenResponseDto;
 }
 
-/**
- * Wrapped in React.memo — this is the heaviest component on the detail
- * screen. Without memo, every Zustand update (e.g. isModalVisible toggle)
- * re-renders the entire accordion tree, causing the freeze.
- */
 function DetailContent({ isTablet, data }: Props) {
     const theme = useAppTheme();
-
-    /**
-     * FIX: Subscribe only to the action selector.
-     * Actions are always the same reference in Zustand, so this subscription
-     * will NEVER trigger a re-render of DetailContent — even when
-     * isModalVisible or activeLocation change in the store.
-     */
     const openReservation = useReservationStore((state) => state.openReservation);
 
     const [showLocation, setShowLocation] = useState(true);
@@ -50,18 +37,38 @@ function DetailContent({ isTablet, data }: Props) {
         else setShowMedia((prev) => !prev);
     }, []);
 
-    /**
-     * FIX: Stable callback so the TouchableOpacity child never re-renders
-     * due to a changed onPress reference.
-     */
     const handleReserve = useCallback(() => {
-        openReservation(data);
+        openReservation(data as any);
     }, [openReservation, data]);
 
     const handleToggleLocation = useCallback(() => toggleSection('location'), [toggleSection]);
     const handleToggleMedia = useCallback(() => toggleSection('media'), [toggleSection]);
 
     if (!data) return null;
+
+    // Build info rows from real backend fields
+    const locationInfo = [
+        { label: 'Country', value: data.country },
+        { label: 'State', value: data.state },
+        { label: 'City', value: data.city },
+        { label: 'Address', value: data.address },
+        { label: 'Venue Type', value: data.venueType },
+        { label: 'Daily Traffic', value: data.dailyTraffic ? `${data.dailyTraffic.toLocaleString()} people/day` : 'N/A' },
+        { label: 'Target Audience', value: data.targetAudience },
+        { label: 'Age Range', value: data.ageRange },
+        { label: 'Dwell Time', value: data.dwellTime },
+        { label: 'Male percentage', value: data.malePercentage  },
+        { label: 'Female percentage', value: data.femalePercentage},
+        { label: 'Weekday Hours', value: data.weekdaysHours },
+        { label: 'Weekend Hours', value: data.weekendsHours },
+    ].filter(info => info.value); // hide empty fields
+
+    const mediaInfo = [
+        { label: 'Resolution', value: data.resolution },
+        { label: 'Orientation', value: data.orientation },
+        { label: 'Screen Count', value: data.screenCount ? `${data.screenCount}` : 'N/A' },
+
+    ].filter(info => info.value);
 
     return (
         <View style={styles.container}>
@@ -70,7 +77,6 @@ function DetailContent({ isTablet, data }: Props) {
                 <Text style={styles.mainTitle} numberOfLines={2}>
                     {data.name || 'Unknown Location'}
                 </Text>
-
                 <TouchableOpacity
                     style={styles.miniReserveBtn}
                     activeOpacity={0.8}
@@ -84,7 +90,7 @@ function DetailContent({ isTablet, data }: Props) {
             <View style={styles.priceContainer}>
                 <Text style={styles.priceText}>
                     <Text style={{ color: '#FF2D55', fontWeight: '900' }}>₦</Text>
-                    {data.price || '0.00'}
+                    {data.priceDaily?.toLocaleString('en-NG') || '0'}
                     <Text style={styles.priceUnit}>/day</Text>
                 </Text>
             </View>
@@ -93,22 +99,21 @@ function DetailContent({ isTablet, data }: Props) {
             <View style={styles.locationRow}>
                 <Ionicons name="location-sharp" size={isTablet ? 14 : 12} color="#FF2D55" />
                 <Text style={styles.locationText} numberOfLines={1}>
-                    {data.address} {data.distance ? `· ${data.distance}` : ''}
+                    {[data.address, data.city, data.state].filter(Boolean).join(', ')}
                 </Text>
             </View>
 
-            {/* 4. SUMMARY */}
-            <View style={styles.summarySection}>
-                <Text style={styles.summaryText}>{data.summary}</Text>
-            </View>
+            {/* 4. DESCRIPTION */}
+            {data.description ? (
+                <View style={styles.summarySection}>
+                    <Text style={styles.summaryText}>{data.description}</Text>
+                </View>
+            ) : null}
 
             <View style={styles.divider} />
 
             {/* 5. LOCATION INFO ACCORDION */}
-            <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={handleToggleLocation}
-            >
+            <TouchableOpacity style={styles.sectionHeader} onPress={handleToggleLocation}>
                 <Text style={styles.sectionTitle}>Location Information</Text>
                 <Ionicons
                     name={showLocation ? 'chevron-up' : 'chevron-down'}
@@ -119,7 +124,7 @@ function DetailContent({ isTablet, data }: Props) {
 
             {showLocation && (
                 <View style={styles.infoBox}>
-                    {data.locationInfo?.map((info, index) => (
+                    {locationInfo.map((info, index) => (
                         <Text key={`loc-${index}`} style={styles.infoText}>
                             • <Text style={{ fontWeight: 'bold' }}>{info.label}:</Text>{' '}
                             {info.value}
@@ -131,10 +136,7 @@ function DetailContent({ isTablet, data }: Props) {
             <View style={styles.itemSpacer} />
 
             {/* 6. SCREEN & MEDIA INFO ACCORDION */}
-            <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={handleToggleMedia}
-            >
+            <TouchableOpacity style={styles.sectionHeader} onPress={handleToggleMedia}>
                 <Text style={styles.sectionTitle}>Screen & Media Information</Text>
                 <Ionicons
                     name={showMedia ? 'chevron-up' : 'chevron-down'}
@@ -145,7 +147,7 @@ function DetailContent({ isTablet, data }: Props) {
 
             {showMedia && (
                 <View style={styles.infoBox}>
-                    {data.mediaInfo?.map((info, index) => (
+                    {mediaInfo.map((info, index) => (
                         <Text key={`media-${index}`} style={styles.infoText}>
                             • <Text style={{ fontWeight: '700' }}>{info.label}:</Text>{' '}
                             {info.value}

@@ -4,45 +4,32 @@ import {
     Text,
     View,
     TouchableOpacity,
-    useColorScheme,
     useWindowDimensions,
     ScrollView,
     FlatList,
-Platform
+    Platform
 } from 'react-native';
-import { useRouter } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 
-
-import { useWishlistStore } from '@/store/useWishlistStore';
-import { useReservationStore } from '@/store/useReservationStore';
 import { useAppTheme, AppTheme } from '@/constants/theme';
 import PackageSelectionModal from '@/components/HomeScreenComponents/PackageSelectionModal';
 import LocationCard from '@/components/HomeScreenComponents/LocationCard';
 
-import { LocationItem, MOCK_LOCATIONS } from '@/constants/mockData';
-
-const RECOMMENDATIONS: Partial<LocationItem>[] = [
-    { id: 'rec1', name: 'Premium Lounge VI', price: '12,000', rating: 4.9, images: [require('@/assets/images/office.jpg')], category: 'Lounge', packages: MOCK_LOCATIONS[0].packages },
-    { id: 'rec2', name: 'Workstation Ikeja', price: '5,500', rating: 4.6, images: [require('@/assets/images/gym.jpg')], category: 'Offices', packages: MOCK_LOCATIONS[1].packages },
-];
+import { useWishlistScreen } from '@/hooks/useWishlistScreen';
 
 export default function WishlistScreen() {
-    const wishlist = useWishlistStore((state) => state.wishlist);
-
-
-    const isModalVisible = useReservationStore((state) => state.isModalVisible);
-    const activeLocation = useReservationStore((state) => state.activeLocation);
-    const closeReservation = useReservationStore((state) => state.closeReservation);
-
     const theme = useAppTheme();
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
-    const router = useRouter();
 
-    const validatedWishlist = useMemo(() => {
-        return (wishlist ?? []).filter(item => item && item.id);
-    }, [wishlist]);
+    const {
+        router,
+        validatedWishlist,
+        recommendedScreens,
+        isModalVisible,
+        activeLocation,
+        closeReservation
+    } = useWishlistScreen();
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
 
@@ -90,13 +77,13 @@ export default function WishlistScreen() {
                     <Text style={styles.sectionHeader}>Recommended for You</Text>
                     <FlatList
                         horizontal
-                        data={RECOMMENDATIONS}
+                        data={recommendedScreens}
                         keyExtractor={(item) => item.id || Math.random().toString()}
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.horizontalList}
                         renderItem={({ item }) => (
                             <View style={styles.horizontalCardWrapper}>
-                                <LocationCard item={item as LocationItem} />
+                                <LocationCard item={item} />
                             </View>
                         )}
                     />

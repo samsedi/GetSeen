@@ -8,10 +8,12 @@ import { HapticTab } from '@/components/haptic-tab';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppTheme } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ScreenOwnerTabLayout() {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = useAppTheme();
+    const insets = useSafeAreaInsets();
 
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
@@ -20,7 +22,7 @@ export default function ScreenOwnerTabLayout() {
     const ownerTint = theme.brandNavy;
     const router = useRouter();
 
-    const styles = useMemo(() => createStyles(isTablet, colorScheme, theme, ownerTint), [isTablet, colorScheme, theme, ownerTint]);
+    const styles = useMemo(() => createStyles(isTablet, colorScheme, theme, ownerTint, insets.bottom), [isTablet, colorScheme, theme, ownerTint, insets.bottom]);
 
     return (
         <>
@@ -53,6 +55,7 @@ export default function ScreenOwnerTabLayout() {
                         tabBarIcon: ({ color, focused }) => (
                             <Ionicons name={focused ? "grid" : "grid-outline"} size={20} color={color} />
                         ),
+                        headerShown:false
                     }}
                 />
 
@@ -93,9 +96,9 @@ export default function ScreenOwnerTabLayout() {
                 />
 
                 <Tabs.Screen
-                    name="earnings"
+                    name="wallet"
                     options={{
-                        title: 'Earnings',
+                        title: 'Wallet',
                         tabBarIcon: ({ color, focused }) => (
                             <Ionicons name={focused ? "wallet" : "wallet-outline"} size={20} color={color} />
                         ),
@@ -116,16 +119,24 @@ export default function ScreenOwnerTabLayout() {
     );
 }
 
-const createStyles = (isTablet: boolean, colorScheme: string, theme: any, ownerTint: string) => {
+const createStyles = (isTablet: boolean, colorScheme: string, theme: any, ownerTint: string, bottomInset: number) => {
     const isDark = colorScheme === 'dark';
+
+    let paddingBottom = Platform.OS === 'ios' ? 25 : 12;
+    let height = isTablet ? 85 : 65;
+
+    if (bottomInset > paddingBottom) {
+        height += (bottomInset - paddingBottom);
+        paddingBottom = bottomInset;
+    }
 
     return StyleSheet.create({
         tabBar: {
             position: 'absolute',
             borderTopWidth: 0,
             elevation: 0,
-            height: isTablet ? 85 : 65,
-            paddingBottom: Platform.OS === 'ios' ? 25 : 12,
+            height: height,
+            paddingBottom: paddingBottom,
             backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)',
         },
         plusContainer: {

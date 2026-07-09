@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
     StyleSheet,
     View,
@@ -6,19 +6,21 @@ import {
     Text,
     TouchableOpacity,
     useWindowDimensions,
-    useColorScheme
+    useColorScheme,
+    ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
 import { Colors } from '@/constants/theme';
+import { useFocusEffect, useRouter } from "expo-router";
 
 import ProfileHeader from '@/components/ProfileScreenComponents/ProfileHeader';
 import ProfileHero from '@/components/ProfileScreenComponents/ProfileHero';
 import StatsCard from '@/components/ProfileScreenComponents/StatsCard';
 import ProfileInfoTile from '@/components/ProfileScreenComponents/ProfileInfoTile';
-import AdHistoryItem from '@/components/ProfileScreenComponents/AdHistoryItem';
 import SupportButton from '@/components/ProfileScreenComponents/SupportButton';
-import {useRouter} from "expo-router"; // Added Import
+
+import { fetchProfile, ProfileData } from '@/api/profileService';
 
 export default function ProfileScreen() {
     const { width } = useWindowDimensions();
@@ -26,12 +28,35 @@ export default function ProfileScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
 
-    const router = useRouter()
+    const router = useRouter();
 
-    const { logout } = useAuthStore();
+    const { logout, role } = useAuthStore();
     const activeTint = theme.tint;
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
+    
+    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useFocusEffect(
+        useCallback(() => {
+            const loadProfile = async () => {
+                try {
+                    const data = await fetchProfile(role || 'advertiser');
+                    setProfile(data);
+                } catch (error) {
+                    console.error("Failed to load profile", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadProfile();
+        }, [role])
+    );
+
+    const displayName = profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Loading...';
+    const companyName = profile?.companyName || 'Not Set';
+    const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.firstName || 'User') + "&background=random";
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -42,106 +67,97 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.scrollContent}
             >
                 {/* Hero Section */}
-                <ProfileHero
-                    name="Marcus Sterling"
-                    company="Sterling & Co. Digital"
-                    imageUrl="https://i.pravatar.cc/300"
-                    tintColor={activeTint}
-                />
+                {loading ? (
+                    <ActivityIndicator size="large" color={activeTint} style={{ marginTop: 20 }} />
+                ) : (
+                    <>
+                        <ProfileHero
+                            name={displayName}
+                            company={companyName}
+                            imageUrl={avatarUrl}
+                            tintColor={activeTint}
+                            onEditPress={() => router.push('/profile-subscreens/edit')}
+                        />
 
-                {/* STATS SECTION */}
-                <View style={[styles.statsRow, { paddingHorizontal: isTablet ? 40 : 24 }]}>
-                    <StatsCard
-                        label="NEXT SCHEDULED AD"
-                        value="Aug 24"
-                        subValue="Summer Campaign"
-                        iconName="calendar-clock"
-                        bgColor={activeTint}
-                    />
-                    <StatsCard
-                        label="RECENT ACTIVITY"
-                        value="+12.4%"
-                        subValue="Engagement reach"
-                        iconName="chart-line-variant"
-                        bgColor="#2B4373"
-                    />
-                </View>
-
-                {/* BUSINESS PROFILE SECTION */}
-                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24 }]}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Business Profile</Text>
-                        <TouchableOpacity activeOpacity={0.6}>
-                            <Text style={[styles.editText, { color: activeTint }]}>EDIT</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={[
-                        styles.infoCard,
-                        { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
-                    ]}>
-                        <View style={styles.infoRow}>
-                            <ProfileInfoTile
-                                label="Verification"
-                                value="Fully Verified"
-                                icon={<Ionicons name="checkmark-circle" size={18} color="#1E7E34" />}
+                        {/* STATS SECTION */}
+                        <View style={[styles.statsRow, { paddingHorizontal: isTablet ? 40 : 24 }]}>
+                            <StatsCard
+                                label="NEXT SCHEDULED AD"
+                                value="Aug 24"
+                                subValue="Summer Campaign"
+                                iconName="calendar-clock"
+                                bgColor={activeTint}
                             />
-                            <ProfileInfoTile label="Tax ID" value="GB-882910394" />
+                            <StatsCard
+                                label="RECENT ACTIVITY"
+                                value="+12.4%"
+                                subValue="Engagement reach"
+                                iconName="chart-line-variant"
+                                bgColor="#2B4373"
+                            />
                         </View>
-                        <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
-                        <View style={styles.infoRow}>
-                            <ProfileInfoTile label="Category" value="Retail & Commerce" />
-                            <ProfileInfoTile label="Location" value="London, UK" />
+
+                        {/* BUSINESS PROFILE SECTION */}
+                        <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24 }]}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={[styles.sectionTitle, { color: theme.text }]}>Business Profile</Text>
+                                <TouchableOpacity activeOpacity={0.6} onPress={() => router.push('/profile-subscreens/edit')}>
+                                    <Text style={[styles.editText, { color: activeTint }]}>EDIT</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile
+                                        label="Verification"
+                                        value="Fully Verified"
+                                        icon={<Ionicons name="checkmark-circle" size={18} color="#1E7E34" />}
+                                    />
+                                    <ProfileInfoTile label="Tax ID" value={profile?.taxId || 'Not set'} />
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Category" value={profile?.category || 'Not set'} />
+                                    <ProfileInfoTile label="Location" value={profile?.city ? `${profile.city}, ${profile.country || ''}` : 'Not set'} />
+                                </View>
+                            </View>
                         </View>
-                    </View>
-                </View>
+                    </>
+                )}
 
-                {/* AD HISTORY SECTION */}
-                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24 }]}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Ad History</Text>
-                        <TouchableOpacity activeOpacity={0.6}>
-                            <Ionicons name="options-outline" size={isTablet ? 24 : 20} color={theme.textSecondary} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <AdHistoryItem
-                        title="Flash Sale Weekend"
-                        date="Aug 12, 2023"
-                        amount="₦150,000.00"
-                        status="ACTIVE"
-                        tintColor={activeTint}
-                    />
-                </View>
-
-                {/* SUPPORT & FEEDBACK SECTION - NEW */}
+                {/* SUPPORT & FEEDBACK SECTION */}
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
                     <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
                         Support & Feedback
                     </Text>
 
                     <SupportButton
-                        label="Report an Issue"
-                        iconName="ladybug"
-                        isBug={true}
+                        label="Contact Support"
+                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={activeTint} />}
                         bgColor={colorScheme === 'dark' ? '#2A181C' : '#FEE2E9'}
                         tintColor={activeTint}
-                        onPress={() => console.log("Report Issue")}
+                        onPress={() => router.push("/profile-subscreens/support")}
                     />
 
                     <SupportButton
                         label="Give Feedback"
-                        iconName="chatbubble-outline"
+                        icon={<Ionicons name="chatbubble-outline" size={isTablet ? 24 : 20} color={activeTint} />}
                         bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
                         tintColor={activeTint}
-                        onPress={() => console.log("Give Feedback")}
+                        onPress={() => router.push("/profile-subscreens/feedback")}
                     />
                 </View>
 
                 {/* LOGOUT BUTTON */}
                 <TouchableOpacity
                     style={[styles.logoutBtn, { borderColor: activeTint + '30' }]}
-                    onPress={()=>router.push("/(auth)/roles")}
+                    onPress={() => {
+                        logout();
+                        router.push("/(auth)/roles");
+                    }}
                     activeOpacity={0.7}
                 >
                     <Ionicons name="log-out-outline" size={20} color={activeTint} />

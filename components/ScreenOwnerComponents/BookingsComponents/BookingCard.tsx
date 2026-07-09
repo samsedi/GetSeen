@@ -25,13 +25,13 @@ export function BookingCard({ booking, onView, onAccept, onDecline }: BookingCar
     
     // Status styling
     const getStatusColor = (status: Booking['status']) => {
-        switch (status) {
-            case 'Completed': return '#4CAF50';
-            case 'Pending': return '#FF9800';
-            case 'Active': return '#2196F3';
-            case 'Cancelled': return '#F44336';
-            default: return theme.textSecondary;
-        }
+        const colors: Record<Booking['status'], string> = {
+            'Completed': theme.success,
+            'Pending': theme.statusWarning,
+            'Active': theme.statusBlue,
+            'Cancelled': theme.error,
+        };
+        return colors[status] || theme.textSecondary;
     };
     
     return (
@@ -57,21 +57,10 @@ export function BookingCard({ booking, onView, onAccept, onDecline }: BookingCar
             </View>
             
             <View style={styles.requestActions}>
-                {booking.status === 'Pending' ? (
-                    <>
-                        <TouchableOpacity style={[styles.requestBtn, styles.declineBtn, { borderColor: theme.border }]} onPress={onDecline}>
-                            <Text style={[styles.declineBtnText, { color: theme.textSecondary }]}>Decline</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.requestBtn, styles.acceptBtn, { backgroundColor: ownerTint }]} onPress={onAccept}>
-                            <Text style={styles.acceptBtnText}>Accept</Text>
-                        </TouchableOpacity>
-                    </>
-                ) : (
-                    <TouchableOpacity style={[styles.requestBtn, styles.viewBtn, { borderColor: theme.border }]} onPress={onView}>
-                        <Ionicons name="eye-outline" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
-                        <Text style={[styles.viewBtnText, { color: theme.textSecondary }]}>View Details</Text>
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity style={[styles.requestBtn, styles.viewBtn, { borderColor: theme.border }]} onPress={onView}>
+                    <Ionicons name="eye-outline" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                    <Text style={[styles.viewBtnText, { color: theme.textSecondary }]}>View Details</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );

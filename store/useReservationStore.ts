@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import { LocationItem } from '@/constants/mockData';
+import { ScreenResponseDto } from '@/api/screenService';
 
 interface ReservationState {
-    activeLocation: LocationItem | null;
+    activeLocation: ScreenResponseDto | null;
     isModalVisible: boolean;
 
-    openReservation: (item: LocationItem) => void;
+    openReservation: (item: ScreenResponseDto) => void;
     closeReservation: () => void;
 }
 

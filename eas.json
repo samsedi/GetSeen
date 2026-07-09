@@ -23,7 +23,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.getseen.com"
+        "EXPO_PUBLIC_API_URL": "https://get-seen-backend.onrender.com/api/v1"
       }
     }
   },

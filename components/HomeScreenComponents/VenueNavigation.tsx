@@ -12,9 +12,22 @@ import { Colors, Typography } from "@/constants/theme";
 
 type Theme = typeof Colors.light;
 
-const VENUE_CATEGORIES = [
-    "For You", "Gyms", "Restaurants", "Co-working", "Lounge", "Offices", "Malls"
-];
+// ✨ 1. Define and EXPORT the map here so HomeScreen can use the exact same logic
+export const CATEGORY_MAP: Record<string, string[]> = {
+    'Restaurants': ['restaurant', 'cafe', 'bistro', 'eatery', 'food'],
+    'Gyms': ['gym', 'fitness', 'workout', 'health club', 'training'],
+    'Malls': ['mall', 'shopping', 'plaza', 'retail', 'center'],
+    'Bars': ['bar', 'lounge', 'club', 'pub', 'nightclub'],
+    'Supermarkets': ['supermarket', 'grocery', 'mart', 'store'],
+    'Cinemas': ['cinema', 'movie', 'theater', 'theatre'],
+    'Co-working': ['co-working', 'workspace', 'office', 'hub'],
+    'Lounge': ['lounge', 'chill', 'bar'],
+    'Offices': ['office', 'corporate', 'business']
+};
+
+// ✨ 2. Dynamically generate the tabs based on the map keys!
+// This guarantees your UI and your filtering logic are never out of sync.
+export const VENUE_CATEGORIES = ["For You", ...Object.keys(CATEGORY_MAP)];
 
 interface Props {
     selected: string;
@@ -49,7 +62,7 @@ const VenueNavigation = ({ selected, setSelected }: Props) => {
                         >
                             <Text style={[
                                 styles.labelText,
-                                { color: isActive ? theme.whiteHeader : theme.textSecondary } // ✅ was "#FFFFFF"
+                                { color: isActive ? theme.whiteHeader : theme.textSecondary }
                             ]}>
                                 {item}
                             </Text>
@@ -61,7 +74,7 @@ const VenueNavigation = ({ selected, setSelected }: Props) => {
     );
 };
 
-const createStyles = (isTablet: boolean, theme: Theme) => StyleSheet.create({  // ✅ theme: any → Theme
+const createStyles = (isTablet: boolean, theme: Theme) => StyleSheet.create({
     container: {
         marginVertical: isTablet ? 16 : 8,
     },

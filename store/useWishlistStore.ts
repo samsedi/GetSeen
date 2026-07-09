@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import { LocationItem } from '@/constants/mockData';
+import { ScreenResponseDto } from '@/api/screenService';
 
 interface WishlistState {
-    wishlist: LocationItem[];
-    toggleWishlist: (item: LocationItem) => void;
+    wishlist: ScreenResponseDto[];
+    toggleWishlist: (item: ScreenResponseDto) => void;
     isItemWished: (id: string) => boolean;
 }
 

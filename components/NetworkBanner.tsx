@@ -7,49 +7,56 @@ export default function NetworkBanner() {
     const [displayState, setDisplayState] = useState<'none' | 'offline' | 'low' | 'restored'>('none');
     const animation = useRef(new Animated.Value(-150)).current;
 
-    // Using a Ref to track "Was I offline?" without triggering re-renders
     const wasOffline = useRef(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
+        const hideBanner = () => {
+            Animated.timing(animation, {
+                toValue: -150,
+                duration: 500,
+                useNativeDriver: true,
+            }).start(() => {
+                setDisplayState('none');
+            });
+        };
+
+        const showBanner = (state: 'offline' | 'low' | 'restored') => {
+            setDisplayState(state);
+            Animated.spring(animation, {
+                toValue: 0,
+                useNativeDriver: true,
+                bounciness: 10
+            }).start();
+
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => {
+                hideBanner();
+            }, 5000);
+        };
+
         const unsubscribe = NetInfo.addEventListener(state => {
             const isNoConn = state.isConnected === false;
             const isLowConn = state.isConnected === true && state.isInternetReachable === false;
 
             if (isNoConn || isLowConn) {
-                // We are currently having issues
                 wasOffline.current = true;
-                setDisplayState(isNoConn ? 'offline' : 'low');
-
-                Animated.spring(animation, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                    bounciness: 10
-                }).start();
+                showBanner(isNoConn ? 'offline' : 'low');
             } else {
-                // We are connected. Check if we just came back from being offline.
                 if (wasOffline.current) {
-                    setDisplayState('restored');
-
-                    // Show "Back Online" for 3 seconds, then hide
-                    setTimeout(() => {
-                        Animated.timing(animation, {
-                            toValue: -150,
-                            duration: 500,
-                            useNativeDriver: true,
-                        }).start(() => {
-                            setDisplayState('none');
-                            wasOffline.current = false;
-                        });
-                    }, 3000);
+                    showBanner('restored');
+                    wasOffline.current = false;
                 } else {
-                    // It was a minor blip or initial load, just keep it hidden
                     setDisplayState('none');
                     animation.setValue(-150);
                 }
             }
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
     }, []);
 
     // Helper to determine look and feel

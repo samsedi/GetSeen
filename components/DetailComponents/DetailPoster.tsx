@@ -1,125 +1,110 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     StyleSheet,
     View,
-    FlatList,
     useColorScheme,
-    NativeSyntheticEvent,
-    NativeScrollEvent,
     TouchableOpacity
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
-import { LocationItem } from '@/constants/mockData';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { ScreenResponseDto } from '@/api/screenService';
 
-export default function DetailPoster({ isTablet, item }: { isTablet: boolean, item: LocationItem }) {
-    // 1. HOOKS FIRST: Initialize all hooks at the top
+export default function DetailPoster({ isTablet, item }: { isTablet: boolean; item: ScreenResponseDto }) {
     const [activeIndex, setActiveIndex] = useState(0);
-    const flatListRef = useRef<FlatList>(null);
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
     const { toggleWishlist, isItemWished } = useWishlistStore();
 
-    // 2. IMAGE EXCEPTION: Fallback for empty image arrays
-    const displayImages = useMemo(() => {
-        return (item.images && item.images.length > 0)
-            ? item.images
-            : [require('@/assets/images/resturant.jpg')];
-    }, [item.images]);
+    const validMediaUrls = useMemo(() => {
+        if (!item.mediaUrls) return [];
+        return item.mediaUrls.filter(url => url && url.startsWith('http'));
+    }, [item.mediaUrls]);
 
-    // Auto-transition logic with Safety Guards
+    const hasImages = validMediaUrls.length > 0;
+
     useEffect(() => {
-        if (displayImages.length <= 1) return;
+        if (validMediaUrls.length <= 1) return;
 
         const interval = setInterval(() => {
-            const nextIndex = (activeIndex + 1) % displayImages.length;
-
-            // Safety: Ensure the ref is valid before scrolling
-            if (flatListRef.current) {
-                flatListRef.current.scrollToIndex({
-                    index: nextIndex,
-                    animated: true,
-                });
-                setActiveIndex(nextIndex);
-            }
-        }, 4000);
+            setActiveIndex(prev => (prev + 1) % validMediaUrls.length);
+        }, 3000);
 
         return () => clearInterval(interval);
-    }, [activeIndex, displayImages.length]);
+    }, [validMediaUrls.length]);
 
-
-    // 3. EXCEPTION: Early return after hooks to satisfy React rules
     if (!item || !item.id) return null;
 
     const isWished = isItemWished(item.id);
     const containerWidth = isTablet ? 450 : 320;
 
-    const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const scrollOffset = event.nativeEvent.contentOffset.x;
-        const index = Math.round(scrollOffset / (containerWidth - 16));
-        if (index !== activeIndex && index >= 0 && index < displayImages.length) {
-            setActiveIndex(index);
-        }
-    };
-
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
             <View style={[styles.posterWrapper, {
                 width: containerWidth,
-                backgroundColor: colorScheme === 'dark' ? '#111' : '#F5F5F5',
-                borderColor: theme.border
+                backgroundColor: theme.cardSoft,
+                borderColor: theme.border,
             }]}>
 
-                {/* WISHLIST HEART BUTTON */}
                 <TouchableOpacity
                     style={styles.heartButton}
                     onPress={() => toggleWishlist(item)}
                     activeOpacity={0.7}
                 >
                     <Ionicons
-                        name={isWished ? "heart" : "heart-outline"}
+                        name={isWished ? 'heart' : 'heart-outline'}
                         size={22}
-                        color={isWished ? "#FF2D55" : "#888"}
+                        color={isWished ? theme.tint : theme.textSecondary}
                     />
                 </TouchableOpacity>
 
-                <FlatList
-                    ref={flatListRef}
-                    data={displayImages}
-                    horizontal
-                    pagingEnabled
-                    snapToAlignment="center"
-                    decelerationRate="fast"
-                    showsHorizontalScrollIndicator={false}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    keyExtractor={(_, index) => index.toString()}
-                    renderItem={({ item: img }) => (
-                        <View style={{ width: containerWidth - 16 }}>
-                            <Image
-                                source={img}
-                                style={styles.mainImage}
-                                contentFit="cover"
-                                transition={400}
-                                cachePolicy="disk"
-                                // Network Exception Placeholder
-                                placeholder={{ uri: 'https://placehold.jp/24/f0f0f0/cccccc/300x200.png?text=GetSeen' }}
-                            />
-                        </View>
-                    )}
+                {/* Single Image that swaps source based on activeIndex */}
+                <Image
+                    source={
+                        hasImages
+                            ? { uri: validMediaUrls[activeIndex] }
+                            : require('@/assets/images/resturant.jpg')
+                    }
+                    style={styles.mainImage}
+                    contentFit="cover"
+                    transition={500}
+                    cachePolicy="disk"
                 />
 
-                {/* PAGINATION DOTS */}
-                {displayImages.length > 1 && (
+                {/* Tap left/right zones to manually swipe */}
+                <View style={styles.tapZones}>
+                    <TouchableOpacity
+                        style={styles.tapZone}
+                        activeOpacity={1}
+                        onPress={() =>
+                            setActiveIndex(prev =>
+                                prev === 0 ? validMediaUrls.length - 1 : prev - 1
+                            )
+                        }
+                    />
+                    <TouchableOpacity
+                        style={styles.tapZone}
+                        activeOpacity={1}
+                        onPress={() =>
+                            setActiveIndex(prev => (prev + 1) % validMediaUrls.length)
+                        }
+                    />
+                </View>
+
+                {validMediaUrls.length > 1 && (
                     <View style={styles.pagination}>
-                        {displayImages.map((_, i) => (
+                        {validMediaUrls.map((_, i) => (
                             <View
                                 key={i}
                                 style={[
                                     styles.dot,
-                                    { backgroundColor: i === activeIndex ? '#FF2D55' : 'rgba(150,150,150,0.4)' }
+                                    {
+                                        backgroundColor:
+                                            i === activeIndex
+                                                ? theme.tint
+                                                : theme.textMuted,
+                                    },
                                 ]}
                             />
                         ))}
@@ -157,7 +142,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 5,
@@ -167,12 +152,25 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 12,
     },
+    tapZones: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: 'row',
+        zIndex: 5,
+    },
+    tapZone: {
+        flex: 1,
+    },
     pagination: {
         flexDirection: 'row',
         position: 'absolute',
         bottom: 18,
         alignSelf: 'center',
         gap: 6,
+        zIndex: 10,
     },
     dot: {
         width: 6,

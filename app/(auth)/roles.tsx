@@ -11,9 +11,10 @@ import { useRouter } from 'expo-router';
 import { ROLES } from '@/constants/mockData';
 import RoleCard from '@/components/RoleScreenComponents/RoleCard';
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors, Typography } from '@/constants/theme';
+import { Typography, useAppTheme } from '@/constants/theme';
 import { Image } from 'expo-image';
 
+// Added the exclamation marks to match the video exactly
 const WORDS = ["EAT", "WORK", "PLAY", "SHOP"];
 
 export default function RoleScreen() {
@@ -21,10 +22,10 @@ export default function RoleScreen() {
     const isTablet = width >= 600;
     const router = useRouter();
 
-    const colorScheme = useColorScheme() ?? 'light';
-    const theme = Colors[colorScheme];
+    // Utilizing your custom hook
+    const colorScheme = useColorScheme();
+    const theme = useAppTheme();
 
-    // 2. Conditionally select the logo source
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')
         : require('@/assets/images/getseen-light-removebg-preview.png');
@@ -70,9 +71,10 @@ export default function RoleScreen() {
                     source={logoSource}
                     style={[
                         styles.logoImage,
-                        { width: isTablet ? 150 : 120 } // Responsive sizing
+                        { width: isTablet ? 150 : 100 }
                     ]}
                     contentFit="contain"
+                    transition={200}
                 />
             </View>
 
@@ -95,6 +97,7 @@ export default function RoleScreen() {
                             }
                         ]}>
                             Reach Your Customers Where They
+                            {/* Removed the explicit fontWeight here so it perfectly inherits the mainHeading weight */}
                             <Text style={{ color: theme.tint }}> {displayText}</Text>
                             <Text style={[styles.cursor, { color: theme.tint }]}>|</Text>
                         </Text>
@@ -144,7 +147,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         position: 'relative',
     },
-    // 3. Add logo styling
     logoImage: {
         height: 40,
     },
@@ -162,7 +164,7 @@ const styles = StyleSheet.create({
         minHeight: 140
     },
     mainHeading: {
-        lineHeight: 46
+        lineHeight: 46,
     },
     cursor: {
         fontWeight: '200',

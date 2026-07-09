@@ -1,117 +1,60 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-    StyleSheet,
-    View,
-    ScrollView,
-    TouchableOpacity,
-    Text,
-    useColorScheme,
-    Image,
-    useWindowDimensions
+    StyleSheet, View, ScrollView, TouchableOpacity,
+    Text, useColorScheme, useWindowDimensions, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import { Image } from 'expo-image';
 
+import { useAppTheme } from '@/constants/theme';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
 import AuthToggle from '@/components/AuthComponents/AuthToggle';
-import AuthInputField from '@/components/AuthComponents/AuthInputField';
+import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 
-const REGEX = {
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    password: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
-    company: /^[a-zA-Z0-9\s]{2,}$/
-};
+import { useScreenOwnerAuth } from '@/hooks/useScreenOwnerAuth';
 
 export default function VenueOwnerAuth() {
-    const [isSignIn, setIsSignIn] = useState(true);
-    const [isForgotPassword, setIsForgotPassword] = useState(false);
-    const [agreeTerms, setAgreeTerms] = useState(false);
+    // ─── Logic ────────────────────────────────────────────────────────────
+    const {
+        isSignIn, setIsSignIn,
+        agreeTerms, setAgreeTerms,
+        loading, form, errors,
+        isButtonDisabled,
+        handleInputChange,
+        handleAuthSubmit,
+        goForgotPassword,
+    } = useScreenOwnerAuth();
 
-    const [form, setForm] = useState({
-        companyName: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-
-    const [errors, setErrors] = useState({
-        companyName: false,
-        email: false,
-        password: false,
-        confirmPassword: false
-    });
-
+    // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
-    const colorScheme = useColorScheme() ?? 'light';
-    const theme = Colors[colorScheme];
+    const isTablet = width >= 600;
+    const colorScheme = useColorScheme();
+    const theme = useAppTheme();
     const router = useRouter();
 
-    const brandBlue = '#2B4373';
+    const brandBlue = theme.brandNavy;
     const errorRed = '#FF3B30';
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF';
+    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
+    const inputBorder = theme.border;
 
-    const handleInputChange = (field: keyof typeof form, value: string) => {
-        setForm(prev => ({ ...prev, [field]: value }));
-        let isValid = true;
-        if (value.length > 0) {
-            if (field === 'email') isValid = REGEX.email.test(value);
-            else if (field === 'password') isValid = REGEX.password.test(value);
-            else if (field === 'companyName') isValid = REGEX.company.test(value);
-            else if (field === 'confirmPassword') isValid = value === form.password;
-        }
-        setErrors(prev => ({ ...prev, [field]: !isValid }));
-    };
+    const promo = isSignIn
+        ? { title: 'Welcome Back!', subtitle: 'Sign in to continue earning with screens in your venues.', icon: 'tv-outline' }
+        : { title: 'Monetize Your Venue', subtitle: 'Earn revenue by hosting digital screens in your location. Manage screens and track earnings.', icon: 'tv-outline' };
 
-    const handlePress = () => {
-        if (isForgotPassword) {
-            setIsForgotPassword(false);
-        } else {
-            router.push('/(tabs)/home');
-        }
-    };
+    const logoSource = colorScheme === 'dark'
+        ? require('@/assets/images/getseen-dark-removebg-preview.png')
+        : require('@/assets/images/getseen-light-removebg-preview.png');
 
-    // --- UPDATED PROMO LOGIC ---
-    const getPromoContent = () => {
-        if (isForgotPassword) {
-            return {
-                title: "Forgot Password?",
-                subtitle: "Enter your registered vendor email to receive a reset link.",
-                icon: "lock-open-outline"
-            };
-        }
-        if (isSignIn) {
-            return {
-                title: "Welcome Back!",
-                subtitle: "Sign in to continue earning with screens in your venues.",
-                icon: "tv-outline"
-            };
-        }
-        return {
-            title: "Monetize Your Venue",
-            subtitle: "Earn revenue by hosting digital screens in your location. Manage screens and track earnings.",
-            icon: "tv-outline"
-        };
-    };
-
-    const promo = getPromoContent();
-
-    const isButtonDisabled = isSignIn
-        ? (!form.email || !form.password)
-        : (!form.companyName || !form.email || !form.password || !agreeTerms);
-
+    // ─── Render ────────────────────────────────────────────────────────────
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} disabled={loading}>
                     <Ionicons name="arrow-back" size={24} color={brandBlue} />
                 </TouchableOpacity>
-                <Image
-                    source={colorScheme === 'dark' ? require('@/assets/images/getseen-dark-removebg-preview.png') : require('@/assets/images/getseen-light-removebg-preview.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
+                <Image source={logoSource} style={styles.logo} contentFit="contain" />
                 <View style={{ width: 40 }} />
             </View>
 
@@ -119,108 +62,102 @@ export default function VenueOwnerAuth() {
                 <AuthPromoCard
                     title={promo.title}
                     subtitle={promo.subtitle}
-                    bgColor='#D11243'
-
+                    bgColor="#D11243"
                     iconName={promo.icon as any}
                 />
 
-                {!isForgotPassword && (
-                    <AuthToggle
-                        isSignIn={isSignIn}
-                        onToggle={setIsSignIn}
-                        activeColor={brandBlue}
-
-                        bgColor={colorScheme === 'dark' ? '#222' : '#F3F4F6'}
-                    />
-                )}
+                <AuthToggle
+                    isSignIn={isSignIn}
+                    onToggle={setIsSignIn}
+                    activeColor={brandBlue}
+                    bgColor={colorScheme === 'dark' ? '#222' : theme.card}
+                />
 
                 <View style={styles.formContainer}>
-                    {isForgotPassword ? (
+                    {!isSignIn && (
                         <AuthInputField
-                            label="Email Address"
-                            placeholder="Enter your vendor email"
+                            label="Company Name"
+                            placeholder="e.g. Silverbird Cinemas"
+                            autoCapitalize="none"
+                            value={form.companyName}
+                            onChangeText={(v) => handleInputChange('companyName', v)}
+                            borderColor={errors.companyName ? errorRed : inputBorder}
+                            errorText={errors.companyName ? "At least 2 characters" : undefined}
                             inputBgColor={inputBg}
-                            value={form.email}
-                            onChangeText={(v) => handleInputChange('email', v)}
-
+                            textColor={theme.text}
+                            labelColor={theme.text}
+                            accentColor={brandBlue}
                         />
-                    ) : (
+                    )}
+
+                    <AuthInputField
+                        label="Email Address"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        value={form.email}
+                        onChangeText={(v) => handleInputChange('email', v)}
+                        borderColor={errors.email ? errorRed : inputBorder}
+                        errorText={errors.email ? "Invalid email address" : undefined}
+                        inputBgColor={inputBg}
+                        textColor={theme.text}
+                        labelColor={theme.text}
+                        accentColor={brandBlue}
+                    />
+
+                    <PasswordInputField
+                        label="Password"
+                        autoCapitalize="none"
+                        onForgotPress={isSignIn ? goForgotPassword : undefined}
+                        value={form.password}
+                        onChangeText={(v) => handleInputChange('password', v)}
+                        borderColor={errors.password ? errorRed : inputBorder}
+                        errorText={errors.password ? "Min 8 chars, 1 letter, 1 number" : undefined}
+                        inputBgColor={inputBg}
+                        textColor={theme.text}
+                        labelColor={theme.text}
+                        accentColor={brandBlue}
+                    />
+
+                    {!isSignIn && (
                         <>
-                            {!isSignIn && (
-                                <AuthInputField
-                                    label="Company Name"
-                                    placeholder="e.g. Silverbird Cinemas"
-                                    value={form.companyName}
-                                    inputBgColor={inputBg}
-                                    onChangeText={(v) => handleInputChange('companyName', v)}
-                                    borderColor={errors.companyName ? errorRed : '#D1D5DB'}
-                                />
-                            )}
-                            <AuthInputField
-                                label="Email Address"
-                                value={form.email}
-                                onChangeText={(v) => handleInputChange('email', v)}
-                                borderColor={errors.email ? errorRed : '#D1D5DB'}
+                            <PasswordInputField
+                                label="Confirm Password"
+                                autoCapitalize="none"
+                                value={form.confirmPassword}
+                                onChangeText={(v) => handleInputChange('confirmPassword', v)}
+                                borderColor={errors.confirmPassword ? errorRed : inputBorder}
+                                errorText={errors.confirmPassword ? "Passwords do not match" : undefined}
                                 inputBgColor={inputBg}
-                            />
-                            <AuthInputField
-                                label="Password"
-                                isPassword
-                                showForgotLink={isSignIn}
-                                value={form.password}
-                                inputBgColor={inputBg}
-                                onChangeText={(v) => handleInputChange('password', v)}
-                                onForgotPress={() => setIsForgotPassword(true)}
-                                borderColor={errors.password ? errorRed : '#D1D5DB'}
+                                textColor={theme.text}
+                                labelColor={theme.text}
                                 accentColor={brandBlue}
                             />
-                            {!isSignIn && (
-                                <>
-                                    <AuthInputField
-                                        label="Confirm Password"
-                                        isPassword
-                                        value={form.confirmPassword}
-                                        inputBgColor={inputBg}
-                                        onChangeText={(v) => handleInputChange('confirmPassword', v)}
-                                        borderColor={errors.confirmPassword ? errorRed : '#D1D5DB'}
-                                    />
-                                    <TouchableOpacity style={styles.checkboxContainer} onPress={() => setAgreeTerms(!agreeTerms)}>
-                                        <View style={[
-                                            styles.checkbox,
-                                            agreeTerms && { backgroundColor: brandBlue, borderColor: brandBlue }
-                                        ]}>
-                                            {agreeTerms && <Ionicons name="checkmark" size={14} color="white" />}
-                                        </View>
-                                        <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
-                                            I agree to the <Text style={{ color: brandBlue }}>Terms</Text> and <Text style={{ color: brandBlue }}>Privacy</Text>
-                                        </Text>
-                                    </TouchableOpacity>
-                                </>
-                            )}
+                            <TouchableOpacity style={styles.checkboxContainer} onPress={() => setAgreeTerms(!agreeTerms)}>
+                                <View style={[
+                                    styles.checkbox,
+                                    { borderColor: inputBorder },
+                                    agreeTerms && { backgroundColor: brandBlue, borderColor: brandBlue }
+                                ]}>
+                                    {agreeTerms && <Ionicons name="checkmark" size={14} color="white" />}
+                                </View>
+                                <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                                    I agree to the <Text style={{ color: brandBlue }}>Terms</Text> and <Text style={{ color: brandBlue }}>Privacy</Text>
+                                </Text>
+                            </TouchableOpacity>
                         </>
                     )}
                 </View>
 
                 <TouchableOpacity
-                    style={[
-                        styles.mainBtn,
-                        { backgroundColor: brandBlue },
-                        isButtonDisabled && { opacity: 0.5 }
-                    ]}
-                    onPress={handlePress}
+                    style={[styles.mainBtn, { backgroundColor: brandBlue }, isButtonDisabled && { opacity: 0.5 }]}
+                    onPress={handleAuthSubmit}
                     disabled={isButtonDisabled}
                 >
-                    <Text style={styles.mainBtnText}>
-                        {isForgotPassword ? "Send Reset Link" : isSignIn ? "Sign In" : "Create Account"}
-                    </Text>
+                    {loading
+                        ? <ActivityIndicator color="white" />
+                        : <Text style={styles.mainBtnText}>{isSignIn ? 'Sign In' : 'Create Account'}</Text>
+                    }
                 </TouchableOpacity>
-
-                {isForgotPassword && (
-                    <TouchableOpacity onPress={() => setIsForgotPassword(false)} style={styles.backLink}>
-                        <Ionicons name="arrow-back" size={16} color={brandBlue} />
-                        <Text style={{ color: brandBlue, fontWeight: '600' }}> Back to Login</Text>
-                    </TouchableOpacity>
-                )}
             </ScrollView>
         </SafeAreaView>
     );
@@ -234,8 +171,7 @@ const styles = StyleSheet.create({
     scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
     formContainer: { marginTop: 20 },
     checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
-    checkbox: { width: 20, height: 20, borderWidth: 1.5, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 10, borderColor: '#D1D5DB' },
+    checkbox: { width: 20, height: 20, borderWidth: 1.5, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
     mainBtn: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
     mainBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
-    backLink: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 }
 });
