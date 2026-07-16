@@ -7,7 +7,8 @@ import {
     TouchableOpacity,
     useWindowDimensions,
     useColorScheme,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -21,6 +22,7 @@ import ProfileInfoTile from '@/components/ProfileScreenComponents/ProfileInfoTil
 import SupportButton from '@/components/ProfileScreenComponents/SupportButton';
 
 import { fetchProfile, ProfileData } from '@/api/profileService';
+import { clearCache } from '@/api/cacheService';
 
 export default function ProfileScreen() {
     const { width } = useWindowDimensions();
@@ -37,6 +39,7 @@ export default function ProfileScreen() {
     
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -54,6 +57,19 @@ export default function ProfileScreen() {
         }, [role])
     );
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        clearCache(`profile_${role || 'advertiser'}`);
+        try {
+            const data = await fetchProfile(role || 'advertiser');
+            setProfile(data);
+        } catch (error) {
+            console.error("Failed to refresh profile", error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const displayName = profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Loading...';
     const companyName = profile?.companyName || 'Not Set';
     const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.firstName || 'User') + "&background=random";
@@ -65,6 +81,9 @@ export default function ProfileScreen() {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTint} />
+                }
             >
                 {/* Hero Section */}
                 {loading ? (

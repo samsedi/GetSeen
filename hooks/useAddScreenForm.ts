@@ -29,7 +29,7 @@ export function useAddScreenForm() {
         setForm, setExtra, setCustomVenueType, setMediaFiles
     );
 
-    const { loading, handleSaveDraft, submitScreen } = useScreenSubmitter(
+    const { loading, uploadProgress, handleSaveDraft, submitScreen } = useScreenSubmitter(
         form, extra, customVenueType, mediaFiles, currentDraftId
     );
 
@@ -60,7 +60,7 @@ export function useAddScreenForm() {
 
     return {
         form, extra, customVenueType, setCustomVenueType,
-        mediaFiles, loading, fetchingDraft, currentDraftId, params,
+        mediaFiles, loading, uploadProgress, fetchingDraft, currentDraftId, params,
         pickerVisible, setPickerVisible, pickerData, openDropdown,
         handleFormChange, handleExtraChange, pickMedia, removeMedia,
         handleSaveDraft, submitScreen,

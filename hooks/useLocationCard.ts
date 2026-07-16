@@ -17,14 +17,21 @@ export function useLocationCard(item: ScreenResponseDto) {
         return item.mediaUrls.filter(url => url && url.startsWith('http'));
     }, [item?.mediaUrls]);
 
+    const currentUrl = validMediaUrls[activeIndex];
+    const isCurrentVideo = currentUrl && currentUrl.toLowerCase().includes('.mp4');
+
     useEffect(() => {
-        if (validMediaUrls.length <= 1) return;
+        if (validMediaUrls.length <= 1 || isCurrentVideo) return;
 
         const interval = setInterval(() => {
             setActiveIndex(prev => (prev + 1) % validMediaUrls.length);
         }, 3000);
 
         return () => clearInterval(interval);
+    }, [validMediaUrls.length, isCurrentVideo, activeIndex]);
+
+    const handleVideoEnd = useCallback(() => {
+        setActiveIndex(prev => (prev + 1) % validMediaUrls.length);
     }, [validMediaUrls.length]);
 
     const handleNavigate = useCallback(() => {
@@ -57,5 +64,6 @@ export function useLocationCard(item: ScreenResponseDto) {
         handleWishlist,
         handleReserve,
         isWished,
+        handleVideoEnd,
     };
 }

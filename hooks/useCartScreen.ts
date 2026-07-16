@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 export function useCartScreen() {
     const { items, totalAmount, setCartData, clearCartData } = useCartStore();
     const [isLoading, setIsLoading] = useState(false);
+    const [uploadProgresses, setUploadProgresses] = useState<Record<string, number>>({});
 
     useEffect(() => { loadCartSafely(); }, []);
 
@@ -73,7 +74,7 @@ export function useCartScreen() {
             // Pick an image
             const pickerResult = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 1,
             });
 
@@ -89,11 +90,19 @@ export function useCartScreen() {
             const mediaFile = { uri, name, type };
 
             setIsLoading(true);
-            await replaceItemWithMedia(item, mediaFile);
+            setUploadProgresses(prev => ({ ...prev, [item.id]: 0 }));
+            await replaceItemWithMedia(item, mediaFile, (progress) => {
+                setUploadProgresses(prev => ({ ...prev, [item.id]: progress }));
+            });
             await fetchCartOrHandleError();
         } catch (e) {
             handleCartError('Failed to upload media.', e);
         } finally {
+            setUploadProgresses(prev => {
+                const newP = { ...prev };
+                delete newP[item.id];
+                return newP;
+            });
             setIsLoading(false);
         }
     }, []);
@@ -113,7 +122,7 @@ export function useCartScreen() {
         }
     }, []);
 
-    return { cartItems: items, totalAmount, isLoading, handleRemoveItem, handleClearCart, handleUploadMedia, handleRemoveMedia };
+    return { cartItems: items, totalAmount, isLoading, uploadProgresses, handleRemoveItem, handleClearCart, handleUploadMedia, handleRemoveMedia };
 
 }
 
@@ -121,11 +130,11 @@ export function useCartScreen() {
 // Private helpers — gradually lower-level detail below
 // ─────────────────────────────────────────────────────────────
 
-const replaceItemWithMedia = async (item: CartItemResponse, mediaFile: { uri: string; name: string; type: string }): Promise<void> => {
+const replaceItemWithMedia = async (item: CartItemResponse, mediaFile: { uri: string; name: string; type: string }, onProgress?: (progress: number) => void): Promise<void> => {
     await cartService.removeFromCart(item.id);
     const data = buildReAddData(item);
     const formData = cartService.buildAddToCartFormData(data, mediaFile);
-    await cartService.addToCart(formData);
+    await cartService.addToCart(formData, onProgress);
 };
 
 const buildReAddData = (item: CartItemResponse): AddToCartData => ({

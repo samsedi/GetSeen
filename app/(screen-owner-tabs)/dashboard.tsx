@@ -8,7 +8,8 @@ import {
     useColorScheme,
     useWindowDimensions,
     TouchableOpacity,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -25,7 +26,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 
 export default function DashboardScreen() {
     // ─── Logic (all state + data-fetching lives in the hook) ───────────────
-    const { displayedScreens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats } = useDashboard();
+    const { displayedScreens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats, refreshing, onRefresh } = useDashboard();
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
@@ -76,6 +77,9 @@ export default function DashboardScreen() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ownerTint} />
+                }
             >
                 <DashboardOverview stats={stats} />
 

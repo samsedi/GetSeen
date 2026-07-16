@@ -29,9 +29,15 @@ export interface CartResponse {
 
 const CART_ROUTE = '/cart';
 
-const postMultipart = async (url: string, formData: FormData): Promise<void> => {
+const postMultipart = async (url: string, formData: FormData, onProgress?: (progress: number) => void): Promise<void> => {
     await apiClient.post(url, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total && onProgress) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onProgress(percentCompleted);
+            }
+        }
     });
 };
 
@@ -39,8 +45,8 @@ const postMultipart = async (url: string, formData: FormData): Promise<void> => 
 // Commands (return void, mutate server state)
 // ─────────────────────────────────────────────────────────────
 
-const addToCart = async (formData: FormData): Promise<void> => {
-    await postMultipart(`${CART_ROUTE}/items`, formData);
+const addToCart = async (formData: FormData, onProgress?: (progress: number) => void): Promise<void> => {
+    await postMultipart(`${CART_ROUTE}/items`, formData, onProgress);
 };
 
 const removeFromCart = async (itemId: string): Promise<void> => {

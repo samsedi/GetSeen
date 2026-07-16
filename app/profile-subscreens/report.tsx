@@ -38,6 +38,7 @@ export default function ReportIssueScreen() {
     const handlePickScreenshot = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
+            allowsEditing: false,
             quality: 0.8,
         });
 

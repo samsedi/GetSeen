@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { Image } from 'expo-image';
+import VideoPlayerItem from '@/components/VideoPlayerItem';
 import { ScreenResponseDto } from '@/api/screenService';
 import { useLocationCard } from '@/hooks/useLocationCard';
 
@@ -36,6 +37,7 @@ function LocationCard({ item }: LocationCardProps) {
         handleWishlist,
         handleReserve,
         isWished,
+        handleVideoEnd,
     } = useLocationCard(item);
 
     if (!item || !item.id) return null;
@@ -46,13 +48,26 @@ function LocationCard({ item }: LocationCardProps) {
 
                 <View style={StyleSheet.absoluteFill}>
                     {validMediaUrls.length > 0 ? (
-                        <Image
-                            source={{ uri: validMediaUrls[activeIndex] }}
-                            style={{ width: cardWidth, height: cardHeight }}
-                            contentFit="cover"
-                            cachePolicy="disk"
-                            transition={300}
-                        />
+                        (() => {
+                            const activeUrl = validMediaUrls[activeIndex];
+                            const isVideo = activeUrl.toLowerCase().includes('.mp4');
+                            return isVideo ? (
+                                <VideoPlayerItem
+                                    uri={activeUrl}
+                                    style={{ width: cardWidth, height: cardHeight }}
+                                    onFinish={handleVideoEnd}
+                                    shouldPlay={true}
+                                />
+                            ) : (
+                                <Image
+                                    source={{ uri: activeUrl }}
+                                    style={{ width: cardWidth, height: cardHeight }}
+                                    contentFit="cover"
+                                    cachePolicy="disk"
+                                    transition={300}
+                                />
+                            );
+                        })()
                     ) : (
                         <Image
                             source={require('@/assets/images/resturant.jpg')}

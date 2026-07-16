@@ -21,7 +21,7 @@ export function useMediaPicker(initialFiles: LocalMediaFile[] = []) {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images', 'videos'],
-            allowsEditing: Platform.OS !== 'ios',
+            allowsEditing: false,
             quality: 0.8,
         });
 

@@ -6,6 +6,7 @@ import {
 import { useAppTheme, AppTheme } from '@/constants/theme';
 import { Image } from 'expo-image';
 import { useRouter } from "expo-router";
+import VideoPlayerItem from '@/components/VideoPlayerItem';
 import { useScreenCarousel } from '@/hooks/useScreenCarousel';
 
 export interface ScreenItem {
@@ -38,7 +39,8 @@ export default function ScreenCard({ item, ownerTint }: ScreenCardProps) {
         scrollRef,
         handleScroll,
         onScrollBeginDrag,
-        onMomentumScrollEnd
+        onMomentumScrollEnd,
+        advanceToNext
     } = useScreenCarousel(item.images, CARD_WIDTH, 2500);
 
     const styles = useMemo(
@@ -92,20 +94,32 @@ export default function ScreenCard({ item, ownerTint }: ScreenCardProps) {
                     style={{ width: CARD_WIDTH }}
                     contentContainerStyle={{ width: CARD_WIDTH * item.images.length }}
                 >
-                    {item.images.map((imgUri, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            activeOpacity={0.9}
-                            onPress={handleManagePress}
-                        >
-                            <Image
-                                source={{ uri: imgUri }}
-                                style={styles.image}
-                                contentFit="cover"
-                                transition={200}
-                            />
-                        </TouchableOpacity>
-                    ))}
+                    {item.images.map((imgUri, index) => {
+                        const isVideo = imgUri.toLowerCase().includes('.mp4');
+                        return (
+                            <TouchableOpacity
+                                key={index}
+                                activeOpacity={0.9}
+                                onPress={handleManagePress}
+                            >
+                                {isVideo ? (
+                                    <VideoPlayerItem
+                                        uri={imgUri}
+                                        style={styles.image}
+                                        onFinish={advanceToNext}
+                                        shouldPlay={index === activeIndex}
+                                    />
+                                ) : (
+                                    <Image
+                                        source={{ uri: imgUri }}
+                                        style={styles.image}
+                                        contentFit="cover"
+                                        transition={200}
+                                    />
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
 
                 {/* Status badge */}

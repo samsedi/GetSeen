@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import VideoPlayerItem from '@/components/VideoPlayerItem';
 
 import { useAddScreenForm } from '@/hooks/useAddScreenForm';
 
@@ -32,7 +33,7 @@ export default function AddScreenScreen() {
     // ─── Logic (all state + API calls live in the hook) ───────────────────
     const {
         form, extra, customVenueType, setCustomVenueType,
-        mediaFiles, loading, fetchingDraft, params,
+        mediaFiles, loading, uploadProgress, fetchingDraft, params,
         pickerVisible, setPickerVisible, pickerData, openDropdown,
         handleFormChange, handleExtraChange,
         pickMedia, removeMedia,
@@ -312,10 +313,11 @@ export default function AddScreenScreen() {
                             {file.type === 'image' ? (
                                 <Image source={{ uri: file.uri }} style={styles.previewImage} />
                             ) : (
-                                <View style={styles.videoPreviewPlaceholder}>
-                                    <Ionicons name="videocam" size={26} color={ownerTint} />
-                                    <Text style={styles.videoText} numberOfLines={1}>Video</Text>
-                                </View>
+                                <VideoPlayerItem
+                                    uri={file.uri}
+                                    style={styles.previewImage}
+                                    shouldPlay={false}
+                                />
                             )}
                             <TouchableOpacity style={styles.removeBadge} onPress={() => removeMedia(index)}>
                                 <Ionicons name="close-circle" size={18} color={theme.error} />
@@ -343,7 +345,7 @@ export default function AddScreenScreen() {
                         disabled={loading}
                     >
                         {loading
-                            ? <ActivityIndicator color="white" />
+                            ? <Text style={styles.draftBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Saving...'}</Text>
                             : <Text style={styles.draftBtnText}>Save as Draft</Text>
                         }
                     </TouchableOpacity>
@@ -355,7 +357,7 @@ export default function AddScreenScreen() {
                         disabled={loading}
                     >
                         {loading
-                            ? <ActivityIndicator color="white" />
+                            ? <Text style={styles.submitBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Submitting...'}</Text>
                             : <Text style={styles.submitBtnText}>Submit Screen</Text>
                         }
                     </TouchableOpacity>

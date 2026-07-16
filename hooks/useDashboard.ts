@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { clearCache } from '@/api/cacheService';
 
 import screenApi, { ScreenResponseDto, ScreenDraftResponseDto } from '@/api/screenService';
 import { fetchOwnerBookings, CampaignData } from '@/api/campaignService';
@@ -135,9 +136,21 @@ export function useDashboard() {
         pendingPayout: '₦0.00'
     });
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<DashboardTab>('ACTIVE');
 
     const hasFetchedInitially = useRef(false);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        clearCache('screens_my');
+        clearCache('campaigns_owner');
+        // Drafts don't have caching implemented currently, but safe to fetch
+        const data = await fetchDashboardDataSafely();
+        setScreens(data.screens);
+        setStats(data.stats);
+        setRefreshing(false);
+    }, []);
 
     const fetchAllScreens = useCallback(async (showSpinner = true) => {
         if (showSpinner) setLoading(true);
@@ -192,5 +205,7 @@ export function useDashboard() {
         fetchAllScreens,
         searchQuery,
         setSearchQuery,
+        refreshing,
+        onRefresh
     };
 }

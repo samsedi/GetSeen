@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAlertStore } from '@/store/useAlertStore';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
 import authApi from '@/api/authService';
 import { AUTH_REGEX } from './useAdvertiserAuth';
+import { useFormCacheStore } from '@/store/useFormCacheStore';
 
 // --------------------------------------------------------------------------
 // Types
@@ -21,11 +22,26 @@ type ScreenOwnerErrors = Record<keyof ScreenOwnerForm, boolean>;
 // --------------------------------------------------------------------------
 // Isolated Try/Catch API wrappers
 // --------------------------------------------------------------------------
-const attemptLoginSafely = async (credentials: any) => {
+const attemptLoginSafely = async (credentials: any, onUserNotFound?: () => void) => {
     try {
         return await authApi.login(credentials);
     } catch (error: any) {
-        useAlertStore.getState().showAlert('Login Failed', error.message || 'Please check your details and try again.');
+        const msg = (error.response?.data?.message || error.message || '').toLowerCase();
+        
+        // If specifically user not found
+        if (onUserNotFound && (msg.includes('not found') || error.response?.status === 404)) {
+            onUserNotFound();
+            return null;
+        }
+
+        // If wrong password / incorrect credentials
+        if (msg.includes('bad credentials') || msg.includes('incorrect') || error.response?.status === 401) {
+            useAlertStore.getState().showAlert('Login Failed', 'Incorrect email or password. Please try again.');
+            return null;
+        }
+
+        // Generic fallback
+        useAlertStore.getState().showAlert('Login Failed', error.response?.data?.message || error.message || 'Please check your details and try again.');
         return null;
     }
 };
@@ -50,9 +66,14 @@ export function useScreenOwnerAuth() {
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const [form, setForm] = useState<ScreenOwnerForm>({
+    const [form, setForm] = useState<ScreenOwnerForm>(() => ({
         companyName: '', email: '', password: '', confirmPassword: '',
-    });
+        ...(useFormCacheStore.getState().cache['screenOwnerAuth'] || {})
+    }));
+
+    useEffect(() => {
+        useFormCacheStore.getState().setFormCache('screenOwnerAuth', form);
+    }, [form]);
 
     const [errors, setErrors] = useState<ScreenOwnerErrors>({
         companyName: false, email: false, password: false, confirmPassword: false,
@@ -61,7 +82,7 @@ export function useScreenOwnerAuth() {
     // ------------------------------------------------------------------
     // Validation
     // ------------------------------------------------------------------
-    const COMPANY_REGEX = /^[a-zA-Z0-9\s]{2,}$/;
+    const COMPANY_REGEX = /.+/;
 
     const validateField = useCallback((field: keyof ScreenOwnerForm, value: string): boolean => {
         if (value.length === 0) return false;
@@ -89,6 +110,15 @@ export function useScreenOwnerAuth() {
         const response = await attemptLoginSafely({
             email: form.email.trim(),
             password: form.password,
+        }, () => {
+            useAlertStore.getState().showAlert(
+                'Account Not Found',
+                'We could not find an account with this email/password. Would you like to create a new account?',
+                [
+                    { text: 'Try Again', style: 'cancel' },
+                    { text: 'Sign Up', onPress: () => setIsSignIn(false) }
+                ]
+            );
         });
 
         if (!response) return;
@@ -113,6 +143,7 @@ export function useScreenOwnerAuth() {
                 params: { email: form.email.trim(), autoSend: 'true' },
             });
         } else {
+            useFormCacheStore.getState().clearFormCache('screenOwnerAuth');
             router.replace('/(screen-owner-tabs)/dashboard');
         }
     };
@@ -140,6 +171,7 @@ export function useScreenOwnerAuth() {
                     params: { email: form.email.trim(), autoSend: 'true' },
                 });
             } else {
+                useFormCacheStore.getState().clearFormCache('screenOwnerAuth');
                 useAlertStore.getState().showAlert('Success', 'Account created successfully!');
                 // useAlertStore.getState().showAlert('Success', 'Role added to your verified account!');
                 router.replace('/(screen-owner-tabs)/dashboard');

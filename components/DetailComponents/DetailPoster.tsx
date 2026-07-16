@@ -6,6 +6,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { Image } from 'expo-image';
+import VideoPlayerItem from '@/components/VideoPlayerItem';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useWishlistStore } from '@/store/useWishlistStore';
@@ -24,15 +25,18 @@ export default function DetailPoster({ isTablet, item }: { isTablet: boolean; it
 
     const hasImages = validMediaUrls.length > 0;
 
+    const currentUrl = validMediaUrls[activeIndex];
+    const isCurrentVideo = currentUrl && currentUrl.toLowerCase().includes('.mp4');
+
     useEffect(() => {
-        if (validMediaUrls.length <= 1) return;
+        if (validMediaUrls.length <= 1 || isCurrentVideo) return;
 
         const interval = setInterval(() => {
             setActiveIndex(prev => (prev + 1) % validMediaUrls.length);
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [validMediaUrls.length]);
+    }, [validMediaUrls.length, isCurrentVideo, activeIndex]);
 
     if (!item || !item.id) return null;
 
@@ -59,18 +63,33 @@ export default function DetailPoster({ isTablet, item }: { isTablet: boolean; it
                     />
                 </TouchableOpacity>
 
-                {/* Single Image that swaps source based on activeIndex */}
-                <Image
-                    source={
-                        hasImages
-                            ? { uri: validMediaUrls[activeIndex] }
-                            : require('@/assets/images/resturant.jpg')
-                    }
-                    style={styles.mainImage}
-                    contentFit="cover"
-                    transition={500}
-                    cachePolicy="disk"
-                />
+                {/* Single Media that swaps source based on activeIndex */}
+                {(() => {
+                    const activeUrl = hasImages ? validMediaUrls[activeIndex] : null;
+                    const isVideo = activeUrl && activeUrl.toLowerCase().includes('.mp4');
+                    return isVideo ? (
+                        <VideoPlayerItem
+                            uri={activeUrl!}
+                            style={styles.mainImage}
+                            onFinish={() => {
+                                setActiveIndex(prev => (prev + 1) % validMediaUrls.length);
+                            }}
+                            shouldPlay={true}
+                        />
+                    ) : (
+                        <Image
+                            source={
+                                hasImages
+                                    ? { uri: activeUrl! }
+                                    : require('@/assets/images/resturant.jpg')
+                            }
+                            style={styles.mainImage}
+                            contentFit="cover"
+                            transition={500}
+                            cachePolicy="disk"
+                        />
+                    );
+                })()}
 
                 {/* Tap left/right zones to manually swipe */}
                 <View style={styles.tapZones}>

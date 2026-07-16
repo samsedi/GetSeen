@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import screenApi, { ScreenResponseDto } from '@/api/screenService';
+import { clearCache } from '@/api/cacheService';
 import { useReservationStore } from '@/store/useReservationStore';
 import { CATEGORY_MAP } from '@/components/HomeScreenComponents/VenueNavigation';
 
@@ -10,6 +11,7 @@ export function useHomeScreen() {
 
     const [screens, setScreens] = useState<ScreenResponseDto[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedVenue, setSelectedVenue] = useState('For You');
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -28,6 +30,19 @@ export function useHomeScreen() {
         };
 
         void loadDiscoverFeed();
+    }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        clearCache('screens_all');
+        try {
+            const data = await screenApi.getAllScreens();
+            setScreens(data);
+        } catch (error) {
+            console.error("Failed to refresh marketplace screens:", error);
+        } finally {
+            setRefreshing(false);
+        }
     }, []);
 
     const filteredLocations = useMemo(() => {
@@ -69,5 +84,7 @@ export function useHomeScreen() {
         closeReservation,
         searchQuery,
         setSearchQuery,
+        refreshing,
+        onRefresh,
     };
 }

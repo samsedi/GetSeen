@@ -12,7 +12,8 @@ import {
     ActivityIndicator,
     Modal,
     TextInput,
-    ScrollView
+    ScrollView,
+    RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import { Image } from 'expo-image';
 import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
 import { BookingCard, Booking } from '@/components/ScreenOwnerComponents/BookingsComponents/BookingCard';
 import { fetchOwnerBookings, CampaignData } from '@/api/campaignService';
+import { clearCache } from '@/api/cacheService';
 
 export default function BookingsScreen() {
     const { width } = useWindowDimensions();
@@ -36,6 +38,7 @@ export default function BookingsScreen() {
 
     const [bookings, setBookings] = useState<CampaignData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState<CampaignData | null>(null);
     
     // Filter states
@@ -58,6 +61,19 @@ export default function BookingsScreen() {
             loadBookings();
         }, [])
     );
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        clearCache('campaigns_owner');
+        try {
+            const data = await fetchOwnerBookings();
+            setBookings(data);
+        } catch (error) {
+            console.error("Failed to refresh owner bookings", error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const mapCampaignToBooking = (campaign: CampaignData): Booking => {
         let mappedStatus: 'Pending' | 'Completed' | 'Active' | 'Cancelled' = 'Pending';
@@ -218,6 +234,9 @@ export default function BookingsScreen() {
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.listContent}
                     renderItem={renderItem}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ownerTint} />
+                    }
                     showsVerticalScrollIndicator={false}
                     onScroll={Animated.event(
                         [{ nativeEvent: { contentOffset: { y: scrollY } } }],

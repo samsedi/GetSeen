@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { getCached, clearCache } from './cacheService';
 
 export interface ProfileData {
     email: string;
@@ -44,16 +45,23 @@ export interface UpdateProfileRequest {
 }
 
 export const fetchProfile = async (role: string): Promise<ProfileData> => {
-    const response = await apiClient.get(`/profile?role=${role}`);
-    return response.data;
+    return getCached(`profile_${role}`, async () => {
+        const response = await apiClient.get(`/profile?role=${role}`);
+        return response.data;
+    });
 };
 
 export const updateProfile = async (role: string, data: UpdateProfileRequest): Promise<ProfileData> => {
     const response = await apiClient.put(`/profile?role=${role}`, data);
+    clearCache(`profile_${role}`);
     return response.data;
 };
 
-export const uploadAvatar = async (role: string, imageUri: string): Promise<ProfileData> => {
+export const uploadAvatar = async (
+    role: string, 
+    imageUri: string,
+    onProgress?: (progress: number) => void
+): Promise<ProfileData> => {
     const formData = new FormData();
     const filename = imageUri.split('/').pop() || 'avatar.jpg';
     
@@ -71,7 +79,14 @@ export const uploadAvatar = async (role: string, imageUri: string): Promise<Prof
         headers: {
             'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total && onProgress) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onProgress(percentCompleted);
+            }
+        }
     });
     
+    clearCache(`profile_${role}`);
     return response.data;
 };

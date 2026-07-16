@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAlertStore } from '@/store/useAlertStore';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
 import authApi from '@/api/authService';
+import { useFormCacheStore } from '@/store/useFormCacheStore';
 
 // --------------------------------------------------------------------------
 // Shared validation patterns
@@ -12,7 +13,7 @@ export const AUTH_REGEX = {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     password: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
     phone: /^(\+234|0)[789][01]\d{8}$/,
-    name: /^[a-zA-Z]{2,}$/,
+    name: /.+/,
 };
 
 // --------------------------------------------------------------------------
@@ -32,11 +33,26 @@ type AdvertiserErrors = Record<keyof AdvertiserForm, boolean>;
 // --------------------------------------------------------------------------
 // Isolated Try/Catch API wrappers
 // --------------------------------------------------------------------------
-const attemptLoginSafely = async (credentials: any) => {
+const attemptLoginSafely = async (credentials: any, onUserNotFound?: () => void) => {
     try {
         return await authApi.login(credentials);
     } catch (error: any) {
-        useAlertStore.getState().showAlert('Login Failed', error.message || 'Please check your details and try again.');
+        const msg = (error.response?.data?.message || error.message || '').toLowerCase();
+        
+        // If specifically user not found
+        if (onUserNotFound && (msg.includes('not found') || error.response?.status === 404)) {
+            onUserNotFound();
+            return null;
+        }
+
+        // If wrong password / incorrect credentials
+        if (msg.includes('bad credentials') || msg.includes('incorrect') || error.response?.status === 401) {
+            useAlertStore.getState().showAlert('Login Failed', 'Incorrect email or password. Please try again.');
+            return null;
+        }
+
+        // Generic fallback
+        useAlertStore.getState().showAlert('Login Failed', error.response?.data?.message || error.message || 'Please check your details and try again.');
         return null;
     }
 };
@@ -61,10 +77,15 @@ export function useAdvertiserAuth() {
     const [agreeTerms, setAgreeTerms] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const [form, setForm] = useState<AdvertiserForm>({
+    const [form, setForm] = useState<AdvertiserForm>(() => ({
         firstName: '', lastName: '', phone: '',
         email: '', password: '', confirmPassword: '',
-    });
+        ...(useFormCacheStore.getState().cache['advertiserAuth'] || {})
+    }));
+
+    useEffect(() => {
+        useFormCacheStore.getState().setFormCache('advertiserAuth', form);
+    }, [form]);
 
     const [errors, setErrors] = useState<AdvertiserErrors>({
         firstName: false, lastName: false, phone: false,
@@ -102,6 +123,15 @@ export function useAdvertiserAuth() {
         const response = await attemptLoginSafely({
             email: form.email.trim(),
             password: form.password,
+        }, () => {
+            useAlertStore.getState().showAlert(
+                'Account Not Found',
+                'We could not find an account with this email/password. Would you like to create a new account?',
+                [
+                    { text: 'Try Again', style: 'cancel' },
+                    { text: 'Sign Up', onPress: () => setIsSignIn(false) }
+                ]
+            );
         });
 
         if (!response) return;
@@ -126,6 +156,7 @@ export function useAdvertiserAuth() {
                 params: { email: form.email.trim(), autoSend: 'true' },
             });
         } else {
+            useFormCacheStore.getState().clearFormCache('advertiserAuth');
             router.replace('/(tabs)/home');
         }
     };
@@ -156,6 +187,7 @@ export function useAdvertiserAuth() {
                     params: { email: form.email.trim(), autoSend: 'true' },
                 });
             } else {
+                useFormCacheStore.getState().clearFormCache('advertiserAuth');
                 useAlertStore.getState().showAlert('Success', 'Account created successfully!');
                 // useAlertStore.getState().showAlert('Success', 'Role added to your verified account!');
                 router.replace('/(tabs)/home');

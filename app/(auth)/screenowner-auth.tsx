@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { useAppTheme } from '@/constants/theme';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
 import AuthToggle from '@/components/AuthComponents/AuthToggle';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 
 import { useScreenOwnerAuth } from '@/hooks/useScreenOwnerAuth';
@@ -59,11 +60,14 @@ export default function VenueOwnerAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAvoidingView 
-                style={{ flex: 1 }} 
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <KeyboardAwareScrollView 
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid={true}
+                extraScrollHeight={20}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <AuthPromoCard
                     title={promo.title}
                     subtitle={promo.subtitle}
@@ -163,8 +167,7 @@ export default function VenueOwnerAuth() {
                         : <Text style={styles.mainBtnText}>{isSignIn ? 'Sign In' : 'Create Account'}</Text>
                     }
                 </TouchableOpacity>
-            </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

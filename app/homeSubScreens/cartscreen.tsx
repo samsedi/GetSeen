@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     Platform,
     useColorScheme,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,9 +58,12 @@ export default function CartScreen() {
     const {
         cartItems,
         totalAmount,
+        isLoading,
+        uploadProgresses,
         handleRemoveItem,
+        handleClearCart,
         handleUploadMedia,
-        handleRemoveMedia,
+        handleRemoveMedia
     } = useCartScreen();
 
     const {
@@ -134,8 +138,19 @@ export default function CartScreen() {
                                         activeOpacity={0.6}
                                         onPress={() => handleUploadMedia(item)}
                                     >
-                                        <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
-                                        <Text style={[styles.uploadBoxText, { color: theme.textSecondary }]}>Add Media</Text>
+                                        {uploadProgresses[item.id] !== undefined ? (
+                                            <>
+                                                <ActivityIndicator color={theme.tint} />
+                                                <Text style={[styles.uploadBoxText, { color: theme.tint, marginTop: 4 }]}>
+                                                    {uploadProgresses[item.id]}%
+                                                </Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
+                                                <Text style={[styles.uploadBoxText, { color: theme.textSecondary }]}>Add Media</Text>
+                                            </>
+                                        )}
                                     </TouchableOpacity>
                                 )}
                                 

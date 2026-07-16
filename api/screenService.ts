@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { getCached, clearCache } from './cacheService';
 
 export interface ScreenResponseDto {
     id: string;
@@ -61,41 +62,61 @@ export interface ScreenDraftResponseDto {
 const SCREEN_ROUTE = "/screens";
 
 const screenApi = {
-    createScreen: async (formData: FormData): Promise<ScreenResponseDto> => {
+    createScreen: async (formData: FormData, onProgress?: (p: number) => void): Promise<ScreenResponseDto> => {
         const response = await apiClient.post<ScreenResponseDto>(SCREEN_ROUTE, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress ? (progressEvent) => {
+                if (progressEvent.total) {
+                    onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                }
+            } : undefined,
         });
+        clearCache('screens_');
         return response.data;
     },
 
     getMyScreens: async (): Promise<ScreenResponseDto[]> => {
-        const response = await apiClient.get<ScreenResponseDto[]>(`${SCREEN_ROUTE}/my`);
-        return response.data;
+        return getCached('screens_my', async () => {
+            const response = await apiClient.get<ScreenResponseDto[]>(`${SCREEN_ROUTE}/my`);
+            return response.data;
+        });
     },
 
     getAllScreens: async (): Promise<ScreenResponseDto[]> => {
-        const response = await apiClient.get<ScreenResponseDto[]>(SCREEN_ROUTE);
-        return response.data;
+        return getCached('screens_all', async () => {
+            const response = await apiClient.get<ScreenResponseDto[]>(SCREEN_ROUTE);
+            return response.data;
+        });
     },
 
     getScreenById: async (id: string): Promise<ScreenResponseDto> => {
-        const response = await apiClient.get<ScreenResponseDto>(`${SCREEN_ROUTE}/${id}`);
-        return response.data;
+        return getCached(`screens_${id}`, async () => {
+            const response = await apiClient.get<ScreenResponseDto>(`${SCREEN_ROUTE}/${id}`);
+            return response.data;
+        });
     },
 
-    updateScreen: async (id: string, formData: FormData): Promise<ScreenResponseDto> => {
+    updateScreen: async (id: string, formData: FormData, onProgress?: (p: number) => void): Promise<ScreenResponseDto> => {
         const response = await apiClient.put<ScreenResponseDto>(`${SCREEN_ROUTE}/${id}`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress ? (progressEvent) => {
+                if (progressEvent.total) {
+                    onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                }
+            } : undefined,
         });
+        clearCache('screens_');
         return response.data;
     },
 
     deleteScreen: async (id: string): Promise<void> => {
         await apiClient.delete(`${SCREEN_ROUTE}/${id}`);
+        clearCache('screens_');
     },
 
     toggleVisibility: async (id: string): Promise<ScreenResponseDto> => {
         const response = await apiClient.patch<ScreenResponseDto>(`${SCREEN_ROUTE}/${id}/toggle`);
+        clearCache('screens_');
         return response.data;
     },
 
@@ -103,9 +124,14 @@ const screenApi = {
     // DRAFT ENDPOINTS
     // ─────────────────────────────────────────────────────────────
 
-    createDraft: async (formData: FormData): Promise<ScreenDraftResponseDto> => {
+    createDraft: async (formData: FormData, onProgress?: (p: number) => void): Promise<ScreenDraftResponseDto> => {
         const response = await apiClient.post<ScreenDraftResponseDto>('/screens/drafts', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress ? (progressEvent) => {
+                if (progressEvent.total) {
+                    onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                }
+            } : undefined,
         });
         return response.data;
     },
@@ -120,9 +146,14 @@ const screenApi = {
         return response.data;
     },
 
-    updateDraft: async (id: string, formData: FormData): Promise<ScreenDraftResponseDto> => {
+    updateDraft: async (id: string, formData: FormData, onProgress?: (p: number) => void): Promise<ScreenDraftResponseDto> => {
         const response = await apiClient.put<ScreenDraftResponseDto>(`/screens/drafts/${id}`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: onProgress ? (progressEvent) => {
+                if (progressEvent.total) {
+                    onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                }
+            } : undefined,
         });
         return response.data;
     },

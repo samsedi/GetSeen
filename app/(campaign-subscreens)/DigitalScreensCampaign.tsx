@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, Platform, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme, Typography } from '@/constants/theme';
 import CampaignCard from '@/components/CampaignComponents/CampaignCard';
 import { fetchMyCampaigns, CampaignData } from '@/api/campaignService';
+import { clearCache } from '@/api/cacheService';
 
 const CAMPAIGN_CATEGORIES = [
     { id: 'All', label: 'All', icon: 'layers-outline' },
@@ -19,6 +20,7 @@ export default function DigitalScreensCampaign() {
     const [selectedTab, setSelectedTab] = useState('All');
     const [campaigns, setCampaigns] = useState<CampaignData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         const loadCampaigns = async () => {
@@ -33,6 +35,19 @@ export default function DigitalScreensCampaign() {
         };
         loadCampaigns();
     }, []);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        clearCache('campaigns_my');
+        try {
+            const data = await fetchMyCampaigns();
+            setCampaigns(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error("Failed to refresh campaigns", error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     const safeCampaigns = Array.isArray(campaigns) ? campaigns : [];
     const filteredCampaigns = safeCampaigns.filter(c => 
@@ -96,6 +111,9 @@ export default function DigitalScreensCampaign() {
                     showsVerticalScrollIndicator={false}
                     removeClippedSubviews={Platform.OS === 'android'}
                     renderItem={({ item }) => <CampaignCard item={item} />}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
+                    }
                 />
             ) : (
                 <View style={styles.emptyContainer}>

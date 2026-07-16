@@ -1,4 +1,5 @@
 import client from './client';
+import { getCached, clearCache } from './cacheService';
 
 export interface CampaignData {
     id: string;
@@ -21,13 +22,17 @@ export interface CampaignData {
 }
 
 export const fetchMyCampaigns = async (): Promise<CampaignData[]> => {
-    const response = await client.get('/campaigns');
-    return response.data;
+    return getCached('campaigns_my', async () => {
+        const response = await client.get('/campaigns');
+        return response.data;
+    });
 };
 
 export const fetchOwnerBookings = async (): Promise<CampaignData[]> => {
-    const response = await client.get('/campaigns/owner');
-    return response.data;
+    return getCached('campaigns_owner', async () => {
+        const response = await client.get('/campaigns/owner');
+        return response.data;
+    });
 };
 
 export interface DashboardStats {
@@ -38,6 +43,8 @@ export interface DashboardStats {
 }
 
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
-    const response = await client.get('/campaigns/dashboard');
-    return response.data;
+    return getCached('campaigns_dashboard', async () => {
+        const response = await client.get('/campaigns/dashboard');
+        return response.data;
+    });
 };

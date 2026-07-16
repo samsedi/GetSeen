@@ -57,13 +57,13 @@ const buildFormData = (payload: any, mediaFiles: LocalMediaFile[]) => {
 };
 
 // Isolated try/catch fetchers
-const saveDraftSafely = async (formData: FormData, currentDraftId?: string) => {
+const saveDraftSafely = async (formData: FormData, currentDraftId?: string, onProgress?: (p: number) => void) => {
     try {
         if (currentDraftId) {
-            await screenApi.updateDraft(currentDraftId, formData);
+            await screenApi.updateDraft(currentDraftId, formData, onProgress);
             return currentDraftId;
         } else {
-            const newDraft = await screenApi.createDraft(formData);
+            const newDraft = await screenApi.createDraft(formData, onProgress);
             return newDraft.id;
         }
     } catch (error: any) {
@@ -72,13 +72,13 @@ const saveDraftSafely = async (formData: FormData, currentDraftId?: string) => {
     }
 };
 
-const submitScreenSafely = async (formData: FormData, currentDraftId?: string) => {
+const submitScreenSafely = async (formData: FormData, currentDraftId?: string, onProgress?: (p: number) => void) => {
     try {
         if (currentDraftId) {
-            await screenApi.updateDraft(currentDraftId, formData);
+            await screenApi.updateDraft(currentDraftId, formData, onProgress);
             await screenApi.publishDraft(currentDraftId);
         } else {
-            await screenApi.createScreen(formData);
+            await screenApi.createScreen(formData, onProgress);
         }
         return true;
     } catch (error: any) {
@@ -97,6 +97,7 @@ export function useScreenSubmitter(
 ) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     const validateForSubmit = (): string | null => {
         const resolvedVenueType = form.venueType === 'Other' ? customVenueType.trim() : form.venueType;
@@ -126,9 +127,10 @@ export function useScreenSubmitter(
         }
 
         setLoading(true);
+        setUploadProgress(0);
         const payload = buildPayload(form, extra, customVenueType);
         const formData = buildFormData(payload, mediaFiles);
-        const savedId = await saveDraftSafely(formData, currentDraftId);
+        const savedId = await saveDraftSafely(formData, currentDraftId, setUploadProgress);
         setLoading(false);
 
         if (savedId) {
@@ -148,9 +150,10 @@ export function useScreenSubmitter(
         }
 
         setLoading(true);
+        setUploadProgress(0);
         const payload = buildPayload(form, extra, customVenueType);
         const formData = buildFormData(payload, mediaFiles);
-        const success = await submitScreenSafely(formData, currentDraftId);
+        const success = await submitScreenSafely(formData, currentDraftId, setUploadProgress);
         setLoading(false);
 
         if (success) {
@@ -162,5 +165,5 @@ export function useScreenSubmitter(
         }
     };
 
-    return { loading, handleSaveDraft, submitScreen };
+    return { loading, uploadProgress, handleSaveDraft, submitScreen };
 }

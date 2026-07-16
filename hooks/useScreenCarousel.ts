@@ -7,8 +7,11 @@ export function useScreenCarousel(mediaUrls?: string[], cardWidth: number = 0, i
     const activeIndexRef = useRef(0);
     const isManualScrolling = useRef(false);
 
+    const currentMedia = mediaUrls?.[activeIndex];
+    const isCurrentVideo = currentMedia?.toLowerCase().includes('.mp4');
+
     useEffect(() => {
-        if (!mediaUrls || mediaUrls.length <= 1 || cardWidth === 0) return;
+        if (!mediaUrls || mediaUrls.length <= 1 || cardWidth === 0 || isCurrentVideo) return;
 
         const interval = setInterval(() => {
             if (isManualScrolling.current) return;
@@ -27,7 +30,21 @@ export function useScreenCarousel(mediaUrls?: string[], cardWidth: number = 0, i
         }, intervalMs);
 
         return () => clearInterval(interval);
-    }, [mediaUrls, cardWidth, intervalMs]);
+    }, [mediaUrls, cardWidth, intervalMs, isCurrentVideo, activeIndex]);
+
+    const advanceToNext = useCallback(() => {
+        if (!mediaUrls || mediaUrls.length <= 1 || cardWidth === 0) return;
+        const nextIndex = (activeIndexRef.current + 1) % mediaUrls.length;
+        
+        if (scrollRef.current?.scrollTo) {
+            scrollRef.current.scrollTo({ x: nextIndex * cardWidth, animated: true });
+        } else if (scrollRef.current?.scrollToIndex) {
+            scrollRef.current.scrollToIndex({ index: nextIndex, animated: true });
+        }
+        
+        activeIndexRef.current = nextIndex;
+        setActiveIndex(nextIndex);
+    }, [mediaUrls, cardWidth]);
 
     const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
         if (cardWidth === 0) return;
@@ -56,6 +73,7 @@ export function useScreenCarousel(mediaUrls?: string[], cardWidth: number = 0, i
         scrollRef,
         handleScroll,
         onScrollBeginDrag,
-        onMomentumScrollEnd
+        onMomentumScrollEnd,
+        advanceToNext
     };
 }

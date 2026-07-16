@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+    ActivityIndicator,
     StyleSheet,
-    View,
-    ScrollView,
     Text,
     TouchableOpacity,
     useColorScheme,
     useWindowDimensions,
-    ActivityIndicator,
-    Platform
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-import { useAppTheme } from '@/constants/theme';
-import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
-import { useAlertStore } from '@/store/useAlertStore';
-import { useAuthStore } from '@/store/authStore';
 import { fetchProfile, updateProfile, uploadAvatar } from '@/api/profileService';
+import { useFormCacheStore } from '@/store/useFormCacheStore';
+import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
+import { useAppTheme } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
+import { useAlertStore } from '@/store/useAlertStore';
 
 export default function OwnerEditProfileScreen() {
     const { width } = useWindowDimensions();
@@ -29,41 +29,58 @@ export default function OwnerEditProfileScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const router = useRouter();
     const role = useAuthStore(state => state.role);
-    
+
     const activeTint = theme.brandNavy;
 
     const [loading, setLoading] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [fetching, setFetching] = useState(true);
     const [imageUrl, setImageUrl] = useState("https://i.pravatar.cc/300");
-    const [form, setForm] = useState({
-        companyName: '',
-        phoneNumber: '',
-        businessRegNo: '',
-        industry: '',
-        bankName: '',
-        accountNumber: '',
-        accountName: '',
-        facebook: '',
-        instagram: '',
-        tiktok: ''
+    const [form, setForm] = useState(() => {
+        const cached = useFormCacheStore.getState().cache['ownerProfileEdit'];
+        return cached || {
+            companyName: '',
+            phoneNumber: '',
+            businessRegNo: '',
+            industry: '',
+            bankName: '',
+            accountNumber: '',
+            accountName: '',
+            facebook: '',
+            instagram: '',
+            tiktok: ''
+        };
     });
+
+    const isInitialMount = useRef(true);
+    useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        useFormCacheStore.getState().setFormCache('ownerProfileEdit', form);
+    }, [form]);
 
     useEffect(() => {
         const loadProfile = async () => {
             try {
                 const data = await fetchProfile(role || 'owner');
-                setForm({
-                    companyName: data.companyName || '',
-                    phoneNumber: data.phoneNumber || '',
-                    businessRegNo: data.businessRegNo || data.taxId || '',
-                    industry: data.industry || data.category || '',
-                    bankName: data.bankName || '',
-                    accountNumber: data.accountNumber || '',
-                    accountName: data.accountName || '',
-                    facebook: data.facebook || '',
-                    instagram: data.instagram || '',
-                    tiktok: data.tiktok || ''
-                });
+                const cached = useFormCacheStore.getState().cache['ownerProfileEdit'];
+                if (!cached) {
+                    setForm({
+                        companyName: data.companyName || '',
+                        phoneNumber: data.phoneNumber || '',
+                        businessRegNo: data.businessRegNo || data.taxId || '',
+                        industry: data.industry || data.category || '',
+                        bankName: data.bankName || '',
+                        accountNumber: data.accountNumber || '',
+                        accountName: data.accountName || '',
+                        facebook: data.facebook || '',
+                        instagram: data.instagram || '',
+                        tiktok: data.tiktok || ''
+                    });
+                }
                 if (data.avatarUrl) {
                     setImageUrl(data.avatarUrl);
                 } else {
@@ -81,23 +98,26 @@ export default function OwnerEditProfileScreen() {
     const handlePickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ['images'],
-            allowsEditing: true,
+            allowsEditing: false,
             aspect: [1, 1],
             quality: 0.8,
         });
 
         if (!result.canceled) {
             try {
-                setLoading(true);
+                setIsUploading(true);
+                setUploadProgress(0);
                 const newAvatarUri = result.assets[0].uri;
-                const data = await uploadAvatar(role || 'owner', newAvatarUri);
+                const data = await uploadAvatar(role || 'owner', newAvatarUri, (progress) => {
+                    setUploadProgress(progress);
+                });
                 setImageUrl(data.avatarUrl || newAvatarUri);
                 useAlertStore.getState().showAlert("Success", "Profile picture updated successfully.");
             } catch (error) {
                 console.error("Upload error:", error);
                 useAlertStore.getState().showAlert("Error", "Failed to upload picture.");
             } finally {
-                setLoading(false);
+                setIsUploading(false);
             }
         }
     };
@@ -117,6 +137,7 @@ export default function OwnerEditProfileScreen() {
                 instagram: form.instagram,
                 tiktok: form.tiktok,
             });
+            useFormCacheStore.getState().clearFormCache('ownerProfileEdit');
             useAlertStore.getState().showAlert("Success", "Profile updated successfully.");
             router.back();
         } catch (error) {
@@ -148,24 +169,38 @@ export default function OwnerEditProfileScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="close" size={26} color={theme.text} />
                 </TouchableOpacity>
-                <View style={{position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1}}>
+                <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1 }}>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Update Profile</Text>
                 </View>
                 <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                
+            <KeyboardAwareScrollView 
+                style={{ flex: 1 }} 
+                contentContainerStyle={styles.scrollContent} 
+                showsVerticalScrollIndicator={false}
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                keyboardShouldPersistTaps="handled"
+            >
+
                 <View style={styles.avatarContainer}>
                     <View style={styles.avatarWrapper}>
                         <Image source={{ uri: imageUrl }} style={styles.avatar} />
-                        <TouchableOpacity 
-                            style={[styles.editBadge, { backgroundColor: activeTint, borderColor: theme.background }]} 
-                            onPress={handlePickImage}
-                            activeOpacity={0.8}
-                        >
-                            <Ionicons name="camera" size={16} color="white" />
-                        </TouchableOpacity>
+                        {isUploading && (
+                            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', borderRadius: 60 }]}>
+                                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>{uploadProgress}%</Text>
+                            </View>
+                        )}
+                        {!isUploading && (
+                            <TouchableOpacity
+                                style={[styles.editBadge, { backgroundColor: activeTint, borderColor: theme.background }]}
+                                onPress={handlePickImage}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="camera" size={16} color="white" />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -186,6 +221,7 @@ export default function OwnerEditProfileScreen() {
                             label="Phone Number"
                             value={form.phoneNumber}
                             keyboardType="phone-pad"
+                            maxLength={form.phoneNumber?.startsWith('+234') ? 14 : form.phoneNumber?.startsWith('0') ? 11 : 15}
                             onChangeText={(val) => setForm({ ...form, phoneNumber: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
@@ -296,7 +332,7 @@ export default function OwnerEditProfileScreen() {
                     </View>
                 </View>
 
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View style={[styles.footer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
                 <TouchableOpacity
@@ -324,19 +360,19 @@ const styles = StyleSheet.create({
     backButton: { padding: 5, zIndex: 10 },
     headerTitle: { fontSize: 18, fontWeight: '700' },
     scrollContent: { paddingHorizontal: 20, paddingBottom: 40, paddingTop: 20 },
-    
+
     avatarContainer: { alignItems: 'center', marginBottom: 25 },
     avatarWrapper: { position: 'relative' },
     avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#E5E7EB' },
     editBadge: { position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, borderWidth: 3, justifyContent: 'center', alignItems: 'center' },
-    
+
     sectionCard: { marginBottom: 30 },
     sectionHeader: { marginBottom: 15 },
     sectionTitle: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
     sectionSubtitle: { fontSize: 13 },
-    
+
     formGroup: { gap: 15 },
-    
+
     footer: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, gap: 12 },
     cancelBtn: { flex: 1, height: 50, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
     cancelBtnText: { fontWeight: '600', fontSize: 15 },

@@ -7,7 +7,8 @@ import {
     TouchableOpacity,
     useWindowDimensions,
     useColorScheme,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -20,6 +21,7 @@ import ProfileInfoTile from '@/components/ProfileScreenComponents/ProfileInfoTil
 import SupportButton from '@/components/ProfileScreenComponents/SupportButton';
 
 import { fetchProfile, ProfileData } from '@/api/profileService';
+import { clearCache } from '@/api/cacheService';
 import { useDashboard } from '@/hooks/useDashboard';
 
 export default function OwnerProfileScreen() {
@@ -36,6 +38,7 @@ export default function OwnerProfileScreen() {
     
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const { stats, loading: dashboardLoading } = useDashboard();
 
     useFocusEffect(
@@ -54,6 +57,19 @@ export default function OwnerProfileScreen() {
         }, [role])
     );
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        clearCache(`profile_${role || 'owner'}`);
+        try {
+            const data = await fetchProfile(role || 'owner');
+            setProfile(data);
+        } catch (error) {
+            console.error("Failed to refresh profile", error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const companyName = profile?.companyName || 'Loading...';
     const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.companyName || 'Owner') + "&background=random";
 
@@ -64,6 +80,9 @@ export default function OwnerProfileScreen() {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ownerTint} />
+                }
             >
                 {loading ? (
                     <ActivityIndicator size="large" color={ownerTint} style={{ marginTop: 20 }} />

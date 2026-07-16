@@ -11,6 +11,7 @@ import { Colors } from '@/constants/theme';
 
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
 import AuthToggle from '@/components/AuthComponents/AuthToggle';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 
 import { useAdvertiserAuth } from '@/hooks/useAdvertiserAuth';
@@ -59,11 +60,14 @@ export default function AdvertiserAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAvoidingView 
-                style={{ flex: 1 }} 
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <KeyboardAwareScrollView 
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent} 
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                enableOnAndroid={true}
+                extraScrollHeight={20}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <AuthPromoCard
                     title={isSignIn ? 'Welcome Back!' : 'Advertise Your Brand'}
                     subtitle={
@@ -91,7 +95,7 @@ export default function AdvertiserAuth() {
                                     containerStyle={{ flex: 1 }}
                                     label="First Name"
                                     value={form.firstName}
-                                    onChangeText={(val) => handleInputChange('firstName', val)}
+                                    onChangeText={(val) => handleInputChange('firstName', val.trimStart())}
                                     borderColor={errors.firstName ? errorRed : inputBorder}
                                     errorText={errors.firstName ? "At least 2 letters" : undefined}
                                     inputBgColor={inputBg}
@@ -102,7 +106,7 @@ export default function AdvertiserAuth() {
                                     containerStyle={{ flex: 1 }}
                                     label="Last Name"
                                     value={form.lastName}
-                                    onChangeText={(val) => handleInputChange('lastName', val)}
+                                    onChangeText={(val) => handleInputChange('lastName', val.trimStart())}
                                     borderColor={errors.lastName ? errorRed : inputBorder}
                                     errorText={errors.lastName ? "At least 2 letters" : undefined}
                                     inputBgColor={inputBg}
@@ -116,6 +120,7 @@ export default function AdvertiserAuth() {
                                 keyboardType="phone-pad"
                                 placeholder="+234"
                                 value={form.phone}
+                                maxLength={form.phone?.startsWith('+234') ? 14 : form.phone?.startsWith('0') ? 11 : 15}
                                 onChangeText={(val) => handleInputChange('phone', val)}
                                 borderColor={errors.phone ? errorRed : inputBorder}
                                 errorText={errors.phone ? "Invalid phone format" : undefined}
@@ -216,8 +221,7 @@ export default function AdvertiserAuth() {
                         : <Text style={styles.mainBtnText}>{isSignIn ? 'Sign In' : 'Create Account'}</Text>
                     }
                 </TouchableOpacity>
-            </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

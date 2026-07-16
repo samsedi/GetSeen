@@ -53,7 +53,8 @@
           "savePhotosPermission": "Allow Get_Seen to save QR codes to your photos.",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

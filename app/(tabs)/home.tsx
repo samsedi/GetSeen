@@ -8,7 +8,8 @@ import {
     useWindowDimensions,
     TouchableOpacity,
     Platform,
-    ActivityIndicator
+    ActivityIndicator,
+    RefreshControl
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,6 +45,8 @@ export default function HomeScreen() {
         closeReservation,
         searchQuery,
         setSearchQuery,
+        refreshing,
+        onRefresh,
     } = useHomeScreen();
 
     const styles = useMemo(
@@ -63,6 +66,9 @@ export default function HomeScreen() {
                 removeClippedSubviews={Platform.OS === 'android'}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
+                }
             >
                 <CampaignOverview />
 
