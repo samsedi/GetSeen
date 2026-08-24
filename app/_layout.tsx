@@ -3,8 +3,10 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { useState, useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { GlassAlert } from '@/components/ui/GlassAlert';
+import ServerDownModal from '@/components/ui/ServerDownModal';
 import NetworkBanner from '@/components/NetworkBanner';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,6 +14,8 @@ import AnimatedSplashScreen from '@/components/AnimatedSplashScreen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
+import { useAppStore } from '@/store/appStore';
 
 // Prevent the native splash screen from auto-hiding before we're ready
 SplashScreen.preventAutoHideAsync();
@@ -28,16 +32,24 @@ export default function RootLayout() {
     const [isAppReady, setIsAppReady] = useState(false);
 
     useEffect(() => {
-        // Here you can do any async initialization (loading fonts, fetching initial tokens, etc.)
-        // For now, we just immediately say the app is ready.
-        setIsAppReady(true);
+        // Hydrate auth store from SecureStore on app startup
+        useAuthStore.getState().hydrate().then(() => {
+            setIsAppReady(true);
+            
+            // If the user is logged in, immediately fetch bootstrap data
+            const authState = useAuthStore.getState();
+            if (authState.isLoggedIn) {
+                useAppStore.getState().fetchBootstrap();
+            }
+        });
     }, []);
 
     return (
-        <ErrorBoundary>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            {/* 1. Use a View wrapper to ensure the absolute elements stay positioned correctly */}
-            <View style={{ flex: 1, backgroundColor: theme.background }}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ErrorBoundary>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                {/* 1. Use a View wrapper to ensure the absolute elements stay positioned correctly */}
+                <View style={{ flex: 1, backgroundColor: theme.background }}>
 
                 {/* 2. The Stack renders the actual screens */}
                 <Stack>
@@ -48,11 +60,13 @@ export default function RootLayout() {
                     <Stack.Screen name="homeSubScreens" options={{ headerShown: false }} />
                     <Stack.Screen name="screen-owner-homeSubScreens" options={{headerShown:false}}/>
                     <Stack.Screen name="profile-subscreens" options={{headerShown:false}}/>
+                    <Stack.Screen name="(campaign-subscreens)" options={{headerShown:false}}/>
                 </Stack>
 
-                {/* 3. Global UI elements come LAST so they float ON TOP of the Stack */}
+                {/* 3. Global Modals & Banners */}
                 <NetworkBanner />
                 <GlassAlert />
+                <ServerDownModal />
 
                 {/* 4. StatusBar configuration */}
                 <StatusBar
@@ -68,5 +82,6 @@ export default function RootLayout() {
             </View>
         </ThemeProvider>
         </ErrorBoundary>
+        </GestureHandlerRootView>
     );
 }

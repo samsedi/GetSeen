@@ -1,60 +1,70 @@
+import { clearCache, getCached } from './cacheService';
 import apiClient from './client';
-import { getCached, clearCache } from './cacheService';
 
 export interface ProfileData {
+    id: number;
     email: string;
+    phone: string;
     role: string;
-    firstName?: string;
-    lastName?: string;
-    companyName?: string;
-    phoneNumber?: string;
-    country?: string;
-    city?: string;
-    taxId?: string;
-    category?: string;
-    avatarUrl?: string;
-    bankDetails?: string;
-    businessRegNo?: string;
+
+    // Advertiser / General
+    name?: string;
+    first_name?: string;
+    last_name?: string;
+    country_id?: number;
+    business_name?: string;
+    business_reg_no?: string;
     industry?: string;
-    bankName?: string;
-    accountNumber?: string;
-    accountName?: string;
-    facebook?: string;
-    instagram?: string;
-    tiktok?: string;
+    fb_url?: string | null;
+    ig_url?: string | null;
+    tiktok_url?: string | null;
+
+    // Screen Owner Specific
+    company_name?: string;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
+    onboarding_tutorial_completed?: boolean;
+    onboarding_session_booked?: boolean;
+    avatarUrl?: string; // keeping camelCase for app-specific usage if not from API
 }
 
 export interface UpdateProfileRequest {
-    firstName?: string;
-    lastName?: string;
-    companyName?: string;
-    phoneNumber?: string;
-    country?: string;
-    city?: string;
-    taxId?: string;
-    category?: string;
-    bankDetails?: string;
-    businessRegNo?: string;
+    // Advertiser
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    country_id?: number;
+    business_name?: string;
+    business_reg_no?: string;
     industry?: string;
-    bankName?: string;
-    accountNumber?: string;
-    accountName?: string;
-    facebook?: string;
-    instagram?: string;
-    tiktok?: string;
+
+    // Screen Owner
+    company_name?: string;
+    bank_name?: string;
+    account_name?: string;
+    account_number?: string;
+
+    // Social
+    fb_url?: string;
+    ig_url?: string;
+    tiktok_url?: string;
 }
 
 export const fetchProfile = async (role: string): Promise<ProfileData> => {
     return getCached(`profile_${role}`, async () => {
-        const response = await apiClient.get(`/profile?role=${role}`);
-        return response.data;
+        // According to Phase 2, GET /profile doesn't require the role query param, but keeping cache keys separate
+        const response = await apiClient.get('/profile');
+        // Assuming success format: { success: true, data: { user: {...} } }
+        return response?.data?.data?.user;
     });
 };
 
 export const updateProfile = async (role: string, data: UpdateProfileRequest): Promise<ProfileData> => {
-    const response = await apiClient.put(`/profile?role=${role}`, data);
+    // Phase 2 calls for PATCH /profile
+    const response = await apiClient.patch('/profile', data);
     clearCache(`profile_${role}`);
-    return response.data;
+    return response?.data?.data?.user || response.data;
 };
 
 export const uploadAvatar = async (
@@ -75,7 +85,7 @@ export const uploadAvatar = async (
         type,
     } as any);
 
-    const response = await apiClient.post(`/profile/avatar?role=${role}`, formData, {
+    const response = await apiClient.post(`/profile/avatar`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
         },
@@ -88,5 +98,6 @@ export const uploadAvatar = async (
     });
     
     clearCache(`profile_${role}`);
-    return response.data;
+    return response?.data?.data?.user || response.data;
 };
+

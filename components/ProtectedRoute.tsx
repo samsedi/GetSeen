@@ -8,7 +8,13 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     // Read the login state from your global store
-    const { isLoggedIn } = useAuthStore();
+    const { isLoggedIn, hasHydrated } = useAuthStore();
+
+    // Wait for tokens to be read from SecureStore before deciding — otherwise a
+    // logged-in user gets kicked back to /roles on every cold start.
+    if (!hasHydrated) {
+        return null;
+    }
 
     // If the user is NOT logged in, immediately kick them back to the auth flow
     if (!isLoggedIn) {

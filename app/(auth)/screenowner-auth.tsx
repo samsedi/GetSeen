@@ -1,19 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    StyleSheet, View, ScrollView, TouchableOpacity,
-    Text, useColorScheme, useWindowDimensions, ActivityIndicator,
-    KeyboardAvoidingView, Platform
+    ActivityIndicator,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme, useWindowDimensions,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 
-import { useAppTheme } from '@/constants/theme';
+import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
 import AuthToggle from '@/components/AuthComponents/AuthToggle';
+import TermsModal from '@/components/AuthComponents/TermsModal';
+import { PRIVACY_DATA } from '@/constants/PrivacyData';
+import { useAppTheme } from '@/constants/theme';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 
 import { useScreenOwnerAuth } from '@/hooks/useScreenOwnerAuth';
 
@@ -35,11 +40,13 @@ export default function VenueOwnerAuth() {
     const colorScheme = useColorScheme();
     const theme = useAppTheme();
     const router = useRouter();
+    const [showTerms, setShowTerms] = React.useState(false);
+    const [showPrivacy, setShowPrivacy] = React.useState(false);
 
     const brandBlue = theme.brandNavy;
-    const errorRed = '#FF3B30';
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
-    const inputBorder = theme.border;
+    const errorRed = theme.statusRed;
+    const inputBg = theme.inputBg;
+    const inputBorder = theme.inputBorder;
 
     const promo = isSignIn
         ? { title: 'Welcome Back!', subtitle: 'Sign in to continue earning with screens in your venues.', icon: 'tv-outline' }
@@ -60,18 +67,18 @@ export default function VenueOwnerAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAwareScrollView 
+            <KeyboardAwareScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={styles.scrollContent} 
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 enableOnAndroid={true}
                 extraScrollHeight={20}
             >
-                    <AuthPromoCard
+                <AuthPromoCard
                     title={promo.title}
                     subtitle={promo.subtitle}
-                    bgColor="#D11243"
+                    bgColor={theme.brandRed}
                     iconName={promo.icon as any}
                 />
 
@@ -79,22 +86,24 @@ export default function VenueOwnerAuth() {
                     isSignIn={isSignIn}
                     onToggle={setIsSignIn}
                     activeColor={brandBlue}
-                    bgColor={colorScheme === 'dark' ? '#222' : theme.card}
+                    bgColor={theme.card}
                 />
 
                 <View style={styles.formContainer}>
+                    {/* Show phone number instead of companyName */}
                     {!isSignIn && (
                         <AuthInputField
-                            label="Company Name"
-                            placeholder="e.g. Silverbird Cinemas"
-                            autoCapitalize="none"
-                            value={form.companyName}
-                            onChangeText={(v) => handleInputChange('companyName', v)}
-                            borderColor={errors.companyName ? errorRed : inputBorder}
-                            errorText={errors.companyName ? "At least 2 characters" : undefined}
+                            label="Phone Number"
+                            keyboardType="phone-pad"
+                            placeholder="+234"
+                            value={form.phone}
+                            maxLength={form.phone?.startsWith('+234') ? 14 : form.phone?.startsWith('0') ? 11 : 15}
+                            onChangeText={(val) => handleInputChange('phone', val)}
+                            borderColor={errors.phone ? errorRed : inputBorder}
+                            errorText={errors.phone ? "Invalid phone format" : undefined}
                             inputBgColor={inputBg}
-                            textColor={theme.text}
                             labelColor={theme.text}
+                            textColor={theme.text}
                             accentColor={brandBlue}
                         />
                     )}
@@ -112,6 +121,8 @@ export default function VenueOwnerAuth() {
                         labelColor={theme.text}
                         accentColor={brandBlue}
                     />
+
+
 
                     <PasswordInputField
                         label="Password"
@@ -149,8 +160,20 @@ export default function VenueOwnerAuth() {
                                 ]}>
                                     {agreeTerms && <Ionicons name="checkmark" size={14} color="white" />}
                                 </View>
-                                <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
-                                    I agree to the <Text style={{ color: brandBlue }}>Terms</Text> and <Text style={{ color: brandBlue }}>Privacy</Text>
+                                <Text style={[styles.checkboxText, { color: theme.textSecondary }]}>
+                                    I agree to the{' '}
+                                    <Text
+                                        style={{ color: brandBlue }}
+                                        onPress={() => setShowTerms(true)}
+                                    >
+                                        General Terms of Service
+                                    </Text> and{' '}
+                                    <Text
+                                        style={{ color: brandBlue }}
+                                        onPress={() => setShowPrivacy(true)}
+                                    >
+                                        Privacy Policy
+                                    </Text>
                                 </Text>
                             </TouchableOpacity>
                         </>
@@ -168,6 +191,21 @@ export default function VenueOwnerAuth() {
                     }
                 </TouchableOpacity>
             </KeyboardAwareScrollView>
+
+            <TermsModal
+                visible={showTerms}
+                onClose={() => setShowTerms(false)}
+                brandColor={brandBlue}
+                title="General Terms of Service"
+            />
+
+            <TermsModal
+                visible={showPrivacy}
+                onClose={() => setShowPrivacy(false)}
+                brandColor={brandBlue}
+                title="Privacy Policy"
+                data={PRIVACY_DATA}
+            />
         </SafeAreaView>
     );
 }
@@ -181,6 +219,7 @@ const styles = StyleSheet.create({
     formContainer: { marginTop: 20 },
     checkboxContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 15 },
     checkbox: { width: 20, height: 20, borderWidth: 1.5, borderRadius: 4, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+    checkboxText: { fontSize: 14, flex: 1, lineHeight: 20 },
     mainBtn: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
     mainBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
 });

@@ -34,6 +34,8 @@ export const Colors: {
         statusRed: string;
         statusBlue: string;
         toggleOff: string;
+        inputBg: string;
+        inputBorder: string;
     };
     dark: {
         text: string;
@@ -64,6 +66,8 @@ export const Colors: {
         statusRed: string;
         statusBlue: string;
         toggleOff: string;
+        inputBg: string;
+        inputBorder: string;
     };
     [key: string]: any;
 } = {
@@ -96,6 +100,8 @@ export const Colors: {
         statusRed: '#FF3B30',
         statusBlue: '#2196F3',
         toggleOff: '#E5E5EA',
+        inputBg: '#FFFFFF',
+        inputBorder: '#D1D5DB',
     },
     dark: {
         text: '#FFFFFF',
@@ -126,6 +132,8 @@ export const Colors: {
         statusRed: '#FF3B30',
         statusBlue: '#2196F3',
         toggleOff: '#39393D',
+        inputBg: '#1A1A1A',
+        inputBorder: '#333333',
     },
 };
 

@@ -44,7 +44,7 @@ export function usePackageSelectionModal(item: ScreenResponseDto | null, onClose
 
     const isAlreadyInCart = useMemo(() => {
         if (!item) return false;
-        return items.some(cartItem => cartItem.screenId === item.id);
+        return (items || []).some(cartItem => cartItem.screenId === item.id);
     }, [items, item]);
 
     // DYNAMICALLY GENERATE PACKAGES BASED ON BACKEND PRICES
@@ -69,7 +69,8 @@ export function usePackageSelectionModal(item: ScreenResponseDto | null, onClose
 
     useEffect(() => {
         if (derivedPackages.length) {
-            setSelectedId(derivedPackages[0].id);
+            const weeklyPkg = derivedPackages.find(p => p.id === 'weekly');
+            setSelectedId(weeklyPkg ? weeklyPkg.id : derivedPackages[0].id);
             setStartDate(new Date());
             setQuantity(1);
         }
@@ -109,14 +110,15 @@ export function usePackageSelectionModal(item: ScreenResponseDto | null, onClose
         if (!item || !selectedPkg || isAlreadyInCart) return;
         try {
             const data = {
-                screenId: item.id,
-                startDate: formatDateForBackend(startDate),
-                endDate: formatDateForBackend(endDate),
+                screen_id: item.id,
+                duration: selectedPkg.id,
+                duration_multiplier: quantity,
+                start_date: formatDateForBackend(startDate),
+                end_date: formatDateForBackend(endDate),
             };
-            const formData = cartService.buildAddToCartFormData(data);
-            await cartService.addToCart(formData);
+            await cartService.addToCart(data);
             const cart = await cartService.getCart();
-            setCartData(cart.items, cart.totalAmount);
+            setCartData(cart.items, cart.subtotal, cart.totalAmount);
             useAlertStore.getState().showAlert(
                 'Added to Cart',
                 `${selectedPkg.emoji} ${selectedPkg.name} for ${item.name} has been added to your campaign.`
@@ -125,25 +127,11 @@ export function usePackageSelectionModal(item: ScreenResponseDto | null, onClose
             useAlertStore.getState().showAlert('Error', 'Could not add to cart. Please try again.');
         }
         onClose();
-    }, [item, selectedPkg, onClose, startDate, endDate, isAlreadyInCart, setCartData]);
-
-    const sendCartRequest = async () => {
-        const formData = buildFormData();
-        await cartService.addToCart(formData);
-    };
-
-    const buildFormData = (): FormData => {
-        const data = {
-            screenId: item!.id,
-            startDate: formatDateForBackend(startDate),
-            endDate: formatDateForBackend(endDate),
-        };
-        return cartService.buildAddToCartFormData(data);
-    };
+    }, [item, selectedPkg, quantity, onClose, startDate, endDate, isAlreadyInCart, setCartData]);
 
     const refreshCartFromBackend = async () => {
         const cart = await cartService.getCart();
-        setCartData(cart.items, cart.totalAmount);
+        setCartData(cart.items, cart.subtotal, cart.totalAmount);
     };
 
     const showAddedToCartAlert = () => {

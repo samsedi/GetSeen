@@ -8,7 +8,8 @@ import {
     useWindowDimensions,
     useColorScheme,
     ActivityIndicator,
-    RefreshControl
+    RefreshControl,
+    Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -41,6 +42,11 @@ export default function OwnerProfileScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const { stats, loading: dashboardLoading } = useDashboard();
 
+    // Instantly dump local state if user logs out (role becomes null)
+    React.useEffect(() => {
+        if (!role) setProfile(null);
+    }, [role]);
+
     useFocusEffect(
         useCallback(() => {
             const loadProfile = async () => {
@@ -70,8 +76,23 @@ export default function OwnerProfileScreen() {
         }
     };
 
-    const companyName = profile?.companyName || 'Loading...';
-    const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.companyName || 'Owner') + "&background=random";
+    const handleWhatsApp = () => {
+        Linking.openURL('https://wa.me/2347076267899').catch(err => console.error('An error occurred', err));
+    };
+
+    const handleEmail = () => {
+        Linking.openURL('mailto:info@trygetseen.com');
+    };
+
+    const companyName = profile?.company_name || 'Loading...';
+
+    const getInitials = (company?: string) => {
+        if (!company) return 'OW';
+        const parts = company.trim().split(/\s+/);
+        if (parts.length > 1) return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+        return company.substring(0, 2).toUpperCase();
+    };
+    const avatarUrl = profile?.avatarUrl || `https://ui-avatars.com/api/?name=${getInitials(profile?.company_name)}&background=random&length=2`;
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -110,7 +131,7 @@ export default function OwnerProfileScreen() {
                             ]}>
                                 <View style={styles.infoRow}>
                                     <ProfileInfoTile label="Industry" value={profile?.industry || 'Not set'} />
-                                    <ProfileInfoTile label="Reg No" value={profile?.businessRegNo || profile?.taxId || 'Not set'} />
+                                    <ProfileInfoTile label="Reg No" value={profile?.business_reg_no || 'Not set'} />
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
                                 <View style={styles.infoRow}>
@@ -119,7 +140,7 @@ export default function OwnerProfileScreen() {
                                         value="Verified Partner"
                                         icon={<Ionicons name="shield-checkmark" size={18} color="#1E7E34" />}
                                     />
-                                    <ProfileInfoTile label="Phone" value={profile?.phoneNumber || 'Not set'} />
+                                    <ProfileInfoTile label="Phone" value={profile?.phone || 'Not set'} />
                                 </View>
                             </View>
 
@@ -129,12 +150,12 @@ export default function OwnerProfileScreen() {
                                 { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
                             ]}>
                                 <View style={styles.infoRow}>
-                                    <ProfileInfoTile label="Bank Name" value={profile?.bankName || 'Not set'} />
-                                    <ProfileInfoTile label="Account No" value={profile?.accountNumber || 'Not set'} />
+                                    <ProfileInfoTile label="Bank Name" value={profile?.bank_name || 'Not set'} />
+                                    <ProfileInfoTile label="Account No" value={profile?.account_number || 'Not set'} />
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
                                 <View style={styles.infoRow}>
-                                    <ProfileInfoTile label="Account Name" value={profile?.accountName || 'Not set'} />
+                                    <ProfileInfoTile label="Account Name" value={profile?.account_name || 'Not set'} />
                                     <ProfileInfoTile label="Total Screens" value={dashboardLoading ? "Loading..." : `${stats.activeScreens} Active`} />
                                 </View>
                             </View>
@@ -145,12 +166,12 @@ export default function OwnerProfileScreen() {
                                 { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
                             ]}>
                                 <View style={styles.infoRow}>
-                                    <ProfileInfoTile label="Instagram" value={profile?.instagram ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-instagram" size={18} color={theme.tint} />} />
-                                    <ProfileInfoTile label="Facebook" value={profile?.facebook ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-facebook" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="Instagram" value={profile?.ig_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-instagram" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="Facebook" value={profile?.fb_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-facebook" size={18} color={theme.tint} />} />
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
                                 <View style={styles.infoRow}>
-                                    <ProfileInfoTile label="TikTok" value={profile?.tiktok ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-tiktok" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="TikTok" value={profile?.tiktok_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-tiktok" size={18} color={theme.tint} />} />
                                     <ProfileInfoTile label="" value="" />
                                 </View>
                             </View>
@@ -160,25 +181,40 @@ export default function OwnerProfileScreen() {
 
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
                     <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
+                        Activity
+                    </Text>
+
+                    <SupportButton
+                        label="Screen Reviews"
+                        icon={<Ionicons name="star-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
+                        tintColor={ownerTint}
+                        onPress={() => router.push('/screen-owner-homeSubScreens/ownerReviews')}
+                    />
+                </View>
+
+                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
                         Support & Feedback
                     </Text>
 
                     <SupportButton
-                        label="Partner Support"
-                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        label="Contact Support"
+                        icon={<Ionicons name="logo-whatsapp" size={isTablet ? 24 : 20} color={ownerTint} />}
                         bgColor={colorScheme === 'dark' ? '#1E2430' : '#EAEFF8'}
                         tintColor={ownerTint}
-                        onPress={() => router.push("/profile-subscreens/support")}
+                        onPress={handleWhatsApp}
                     />
 
                     <SupportButton
-                        label="Give Feedback"
-                        icon={<Ionicons name="chatbubble-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        label="Report a Bug"
+                        icon={<Ionicons name="mail-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
                         bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
                         tintColor={ownerTint}
-                        onPress={() => router.push("/profile-subscreens/feedback")}
+                        onPress={handleEmail}
                     />
                 </View>
+
 
                 <TouchableOpacity
                     style={[styles.logoutBtn, { borderColor: ownerTint + '30' }]}

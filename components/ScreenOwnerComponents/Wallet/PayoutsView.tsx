@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
 import { PayoutHistoryData } from '@/hooks/useWallet';
@@ -47,18 +47,17 @@ function renderPayoutCard(payout: PayoutHistoryData, styles: any, theme: AppThem
         <View key={payout.id} style={[styles.dataCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
             {renderCardHeader(payout, styles, theme)}
             {renderCardGrid(payout, styles, theme)}
-            {renderCardFooter(styles, theme)}
         </View>
     );
 }
 
 function renderCardHeader(payout: PayoutHistoryData, styles: any, theme: AppTheme) {
     const isPaid = payout.status === 'Paid';
-    const badgeColor = isPaid ? theme.success : (payout.status === 'Processing' ? theme.tint : theme.statusWarning);
+    const badgeColor = isPaid ? theme.success : theme.statusWarning;
     return (
         <View style={styles.cardHeader}>
             <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>{payout.venueName}</Text>
+                <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>{payout.screenTitle}</Text>
                 <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
                     {payout.weekStart} - {payout.weekEnd}
                 </Text>
@@ -74,9 +73,9 @@ function renderCardGrid(payout: PayoutHistoryData, styles: any, theme: AppTheme)
     return (
         <View style={styles.gridContainer}>
             {renderGridItem("Earnings", payout.earnings, theme.success, styles, theme)}
-            {renderGridItem("Campaigns", payout.campaigns, theme.text, styles, theme)}
-            {renderGridItem("Expected", payout.expectedPayout, theme.text, styles, theme)}
-            {renderGridItem("Actual", payout.actualPayout, theme.text, styles, theme)}
+            {renderGridItem("Campaigns", payout.totalCampaigns, theme.text, styles, theme)}
+            {renderGridItem("Expected", payout.expectedPayoutDate, theme.text, styles, theme)}
+            {renderGridItem("Actual", payout.actualPayoutDate || 'Pending', theme.text, styles, theme)}
         </View>
     );
 }
@@ -86,17 +85,6 @@ function renderGridItem(label: string, value: string | number, valueColor: strin
         <View style={styles.gridItem}>
             <Text style={[styles.gridLabel, { color: theme.textSecondary }]}>{label}</Text>
             <Text style={[styles.gridValue, { color: valueColor }]}>{value}</Text>
-        </View>
-    );
-}
-
-function renderCardFooter(styles: any, theme: AppTheme) {
-    return (
-        <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
-            <TouchableOpacity style={[styles.actionBtn, { borderColor: theme.success }]}>
-                <Ionicons name="receipt-outline" size={14} color={theme.success} style={{ marginRight: 6 }} />
-                <Text style={[styles.actionBtnText, { color: theme.success }]}>Receipt</Text>
-            </TouchableOpacity>
         </View>
     );
 }

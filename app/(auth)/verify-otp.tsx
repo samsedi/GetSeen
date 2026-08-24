@@ -29,7 +29,7 @@ export default function VerifyOTP() {
     const router = useRouter();
 
     const brandPink = theme.tint;
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
+    const inputBg = theme.inputBg;
 
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')

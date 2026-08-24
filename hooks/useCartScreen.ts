@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCartStore } from '@/store/useCartStore';
-import cartService, { CartItemResponse, AddToCartData } from '@/api/cartService';
+import cartService, { CartItemResponse } from '@/api/cartService';
 import { useAlertStore } from '@/store/useAlertStore';
+import axios from 'axios';
 
 // ─────────────────────────────────────────────────────────────
 // Hook: useCartScreen
@@ -14,6 +15,20 @@ export function useCartScreen() {
     const { items, totalAmount, setCartData, clearCartData } = useCartStore();
     const [isLoading, setIsLoading] = useState(false);
     const [uploadProgresses, setUploadProgresses] = useState<Record<string, number>>({});
+    const [uploadControllers, setUploadControllers] = useState<Record<string, AbortController>>({});
+
+    // New: Coupon code
+    const [couponCode, setCouponCode] = useState('');
+    const [couponApplied, setCouponApplied] = useState(false);
+    const [couponDiscount, setCouponDiscount] = useState(0);
+
+    // New: Additional instructions
+    const [additionalInstructions, setAdditionalInstructions] = useState('');
+
+    // Phase 6: Cart Media
+    const [isMediaSelectionVisible, setIsMediaSelectionVisible] = useState(false);
+    const [isPreviousMediaVisible, setIsPreviousMediaVisible] = useState(false);
+    const [selectedCartItem, setSelectedCartItem] = useState<CartItemResponse | null>(null);
 
     useEffect(() => { loadCartSafely(); }, []);
 
@@ -33,11 +48,24 @@ export function useCartScreen() {
 
     const fetchAndSyncCart = async () => {
         const cart = await cartService.getCart();
-        setCartData(cart.items, cart.totalAmount);
+        setCartData(cart.items, cart.subtotal, cart.totalAmount);
     };
 
-    const handleRemoveItem = useCallback(async (itemId: string) => {
-        await removeItemSafely(itemId);
+    const handleRemoveItem = useCallback((itemId: string) => {
+        useAlertStore.getState().showAlert(
+            "Remove Item",
+            "Are you sure you want to remove this from your cart?",
+            [
+                { text: "No", style: "cancel" },
+                { 
+                    text: "Yes", 
+                    style: "destructive",
+                    onPress: async () => {
+                        await removeItemSafely(itemId);
+                    }
+                }
+            ]
+        );
     }, []);
 
     const removeItemSafely = async (itemId: string) => {
@@ -62,7 +90,31 @@ export function useCartScreen() {
         }
     };
 
-    const handleUploadMedia = useCallback(async (item: CartItemResponse) => {
+    const handleApplyCoupon = useCallback(async () => {
+        if (!couponCode.trim()) return;
+        try {
+            const data = await cartService.validateCoupon(couponCode);
+            useCartStore.getState().setCouponData(data.discount, data.total, data.coupon);
+            setCouponApplied(true);
+            setCouponDiscount(data.discount);
+            useAlertStore.getState().showAlert('Success', 'Coupon applied successfully!');
+        } catch (error: any) {
+            useAlertStore.getState().showAlert('Coupon Error', error.message || 'Invalid coupon code.');
+            useCartStore.getState().clearCouponData();
+            setCouponApplied(false);
+            setCouponDiscount(0);
+        }
+    }, [couponCode]);
+
+    const handleUploadMedia = useCallback((item: CartItemResponse) => {
+        setSelectedCartItem(item);
+        setIsMediaSelectionVisible(true);
+    }, []);
+
+    const handleDeviceUpload = useCallback(async () => {
+        if (!selectedCartItem) return;
+        const item = selectedCartItem;
+        setIsMediaSelectionVisible(false);
         try {
             // Ask for permissions
             const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -91,38 +143,102 @@ export function useCartScreen() {
 
             setIsLoading(true);
             setUploadProgresses(prev => ({ ...prev, [item.id]: 0 }));
-            await replaceItemWithMedia(item, mediaFile, (progress) => {
+            
+            const controller = new AbortController();
+            setUploadControllers(prev => ({ ...prev, [item.id]: controller }));
+
+            await cartService.uploadCartItemMedia(item.id, mediaFile, (progress) => {
                 setUploadProgresses(prev => ({ ...prev, [item.id]: progress }));
-            });
+            }, controller.signal);
             await fetchCartOrHandleError();
-        } catch (e) {
-            handleCartError('Failed to upload media.', e);
+        } catch (e: any) {
+            if (e.message === 'canceled' || e.name === 'CanceledError' || e.name === 'AbortError') {
+                // upload cancelled, do nothing
+            } else {
+                handleCartError('Failed to upload media.', e);
+            }
         } finally {
             setUploadProgresses(prev => {
                 const newP = { ...prev };
                 delete newP[item.id];
                 return newP;
             });
+            setUploadControllers(prev => {
+                const newC = { ...prev };
+                delete newC[item.id];
+                return newC;
+            });
             setIsLoading(false);
+            setSelectedCartItem(null);
         }
-    }, []);
+    }, [selectedCartItem, fetchCartOrHandleError]);
 
-    const handleRemoveMedia = useCallback(async (item: CartItemResponse) => {
+    const handleAttachExistingMedia = useCallback(async (filename: string) => {
+        if (!selectedCartItem) return;
+        setIsPreviousMediaVisible(false);
+        setIsLoading(true);
         try {
-            setIsLoading(true);
-            await cartService.removeFromCart(item.id);
-            const data = buildReAddData(item);
-            const formData = cartService.buildAddToCartFormData(data);
-            await cartService.addToCart(formData);
+            await cartService.attachExistingMedia(selectedCartItem.id, filename);
             await fetchCartOrHandleError();
-        } catch (e) {
-            handleCartError('Failed to remove media.', e);
+            useAlertStore.getState().showAlert('Success', 'Media attached successfully!');
+        } catch (e: any) {
+            handleCartError('Failed to attach media.', e);
         } finally {
             setIsLoading(false);
+            setSelectedCartItem(null);
         }
-    }, []);
+    }, [selectedCartItem, fetchCartOrHandleError]);
 
-    return { cartItems: items, totalAmount, isLoading, uploadProgresses, handleRemoveItem, handleClearCart, handleUploadMedia, handleRemoveMedia };
+    const handleCancelUpload = useCallback((itemId: string) => {
+        useAlertStore.getState().showAlert(
+            "Cancel Upload",
+            "Are you sure you want to cancel the media upload?",
+            [
+                { text: "No", style: "cancel" },
+                { 
+                    text: "Yes, Cancel", 
+                    style: "destructive",
+                    onPress: () => {
+                        if (uploadControllers[itemId]) {
+                            uploadControllers[itemId].abort();
+                        }
+                    }
+                }
+            ]
+        );
+    }, [uploadControllers]);
+
+    // Compute whether all items have media uploaded
+    const allMediaUploaded = items.length > 0 && items.every(item => !!item.mediaUrl);
+    const hasAnyPendingUpload = items.some(item => !item.mediaUrl);
+
+    return {
+        cartItems: items,
+        totalAmount,
+        isLoading,
+        uploadProgresses,
+        handleRemoveItem,
+        handleClearCart,
+        handleUploadMedia,
+        handleCancelUpload,
+        // New
+        couponCode,
+        setCouponCode,
+        couponApplied,
+        couponDiscount,
+        handleApplyCoupon,
+        additionalInstructions,
+        setAdditionalInstructions,
+        allMediaUploaded,
+        hasAnyPendingUpload,
+        isMediaSelectionVisible,
+        setIsMediaSelectionVisible,
+        isPreviousMediaVisible,
+        setIsPreviousMediaVisible,
+        selectedCartItem,
+        handleDeviceUpload,
+        handleAttachExistingMedia,
+    };
 
 }
 
@@ -130,18 +246,7 @@ export function useCartScreen() {
 // Private helpers — gradually lower-level detail below
 // ─────────────────────────────────────────────────────────────
 
-const replaceItemWithMedia = async (item: CartItemResponse, mediaFile: { uri: string; name: string; type: string }, onProgress?: (progress: number) => void): Promise<void> => {
-    await cartService.removeFromCart(item.id);
-    const data = buildReAddData(item);
-    const formData = cartService.buildAddToCartFormData(data, mediaFile);
-    await cartService.addToCart(formData, onProgress);
-};
 
-const buildReAddData = (item: CartItemResponse): AddToCartData => ({
-    screenId: item.screenId,
-    startDate: item.startDate,
-    endDate: item.endDate,
-});
 
 const handleCartError = (message: string, error: unknown): void => {
     console.error(message, error);

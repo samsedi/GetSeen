@@ -4,9 +4,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 
 import { useAlertStore } from '@/store/useAlertStore';
-import { SavedQR } from '@/constants/mockData';
-import { fetchQrCodes, createQrCode, deleteQrCode } from '@/api/qrService';
+import { useQRStore } from '@/store/useQRStore';
+import { QrCodeResponse } from '@/api/qrService';
 
+// Fallback preview generator for before the QR is saved.
 const buildQrImageUrl = (url: string) =>
     `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}&color=2B4373`;
 
@@ -15,32 +16,25 @@ export function useQRGenerator() {
 
     const [qrName, setQrName] = useState('');
     const [websiteUrl, setWebsiteUrl] = useState('');
-    const [savedQRs, setSavedQRs] = useState<SavedQR[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [viewedQR, setViewedQR] = useState<SavedQR | null>(null);
+    const [viewedQR, setViewedQR] = useState<QrCodeResponse | null>(null);
+
+    // Zustand store values
+    const { qrCodes, pagination, loading, fetchQrCodes, createQrCode, deleteQrCode } = useQRStore();
 
     // Fetch QRs on focus
     useFocusEffect(
         useCallback(() => {
-            let isActive = true;
-            const loadQRs = async () => {
-                try {
-                    const data = await fetchQrCodes();
-                    if (isActive) {
-                        setSavedQRs(data);
-                    }
-                } catch (error) {
-                    console.error("Failed to load QR codes:", error);
-                } finally {
-                    if (isActive) setLoading(false);
-                }
-            };
-            loadQRs();
-            return () => { isActive = false; };
-        }, [])
+            fetchQrCodes({ page: 1, per_page: 5 });
+        }, [fetchQrCodes])
     );
 
-    // Dynamic QR API URL Construction
+    const loadMoreQRs = useCallback(() => {
+        if (!loading && pagination?.has_next) {
+            fetchQrCodes({ page: pagination.page + 1, per_page: 5 });
+        }
+    }, [loading, pagination, fetchQrCodes]);
+
+    // Dynamic QR API URL Construction (for preview before generating)
     const qrImageUrl = useMemo(() => buildQrImageUrl(websiteUrl || "https://getseen.app"), [websiteUrl]);
 
     const handleCreateQR = useCallback(async () => {
@@ -50,8 +44,7 @@ export function useQRGenerator() {
         }
 
         try {
-            const newQR = await createQrCode({ name: qrName, url: websiteUrl });
-            setSavedQRs(prev => [newQR, ...prev]);
+            await createQrCode({ name: qrName, url: websiteUrl });
             setQrName('');
             setWebsiteUrl('');
             showAlert("Success", "New QR Code has been created and saved!");
@@ -59,9 +52,9 @@ export function useQRGenerator() {
             console.error("Failed to create QR code:", error);
             showAlert("Error", "Failed to save QR code. Please try again.");
         }
-    }, [qrName, websiteUrl, showAlert]);
+    }, [qrName, websiteUrl, createQrCode, showAlert]);
 
-    const handleDownload = useCallback(async (qr: SavedQR) => {
+    const handleDownload = useCallback(async (qr: QrCodeResponse) => {
         try {
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
@@ -71,7 +64,8 @@ export function useQRGenerator() {
 
             showAlert("Downloading", "Please wait...");
             
-            const imageUrl = buildQrImageUrl(qr.url);
+            // Use the backend image_url instead of recreating it
+            const imageUrl = qr.image_url;
             const filename = `qr_${qr.id || Date.now()}.png`;
             const fileUri = FileSystem.documentDirectory + filename;
             
@@ -86,7 +80,7 @@ export function useQRGenerator() {
         }
     }, [showAlert]);
 
-    const handleView = useCallback((qr: SavedQR) => {
+    const handleView = useCallback((qr: QrCodeResponse) => {
         setViewedQR(qr);
     }, []);
 
@@ -98,23 +92,22 @@ export function useQRGenerator() {
         showAlert("Analytics", "Loading real-time scan data...");
     }, [showAlert]);
 
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDelete = useCallback(async (id: string | number) => {
         try {
             await deleteQrCode(id);
-            setSavedQRs(prev => prev.filter(q => q.id !== id));
             showAlert("Deleted", "The campaign was successfully removed.");
         } catch (error) {
             console.error("Failed to delete QR code:", error);
             showAlert("Error", "Failed to delete QR code.");
         }
-    }, [showAlert]);
+    }, [deleteQrCode, showAlert]);
 
     return {
         qrName,
         setQrName,
         websiteUrl,
         setWebsiteUrl,
-        savedQRs,
+        savedQRs: qrCodes,
         loading,
         qrImageUrl,
         viewedQR,
@@ -124,7 +117,8 @@ export function useQRGenerator() {
         handleDismissView,
         handleReport,
         handleDelete,
+        loadMoreQRs,
+        hasMore: pagination?.has_next || false,
         buildQrImageUrl,
     };
 }
-

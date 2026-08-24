@@ -24,6 +24,9 @@ import VenueNavigation from '@/components/HomeScreenComponents/VenueNavigation';
 import LocationCardList from '@/components/HomeScreenComponents/LocationCardList';
 import CampaignOverview from '@/components/HomeScreenComponents/CampaignOverview';
 import PackageModal from '@/components/HomeScreenComponents/PackageSelectionModal';
+import { useReviewPrompt } from '@/hooks/useReviewPrompt';
+import ReviewPromptModal from '@/components/ReviewComponents/ReviewPromptModal';
+import LeaveReviewModal from '@/components/ReviewComponents/LeaveReviewModal';
 
 type Theme = AppTheme;
 
@@ -47,7 +50,20 @@ export default function HomeScreen() {
         setSearchQuery,
         refreshing,
         onRefresh,
+        loadMoreScreens,
+        loadLessScreens,
+        hasMore,
+        canLoadLess,
+        pagination,
     } = useHomeScreen();
+
+    const { promptOrder, hidePrompt, handleRemindLater, handleDismiss } = useReviewPrompt();
+    const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+
+    const handleLeaveReview = () => {
+        hidePrompt(); // hide the initial prompt
+        setIsReviewModalVisible(true); // show the actual review modal
+    };
 
     const styles = useMemo(
         () => createStyles(isTablet, theme, insets.bottom),
@@ -86,7 +102,7 @@ export default function HomeScreen() {
                     setSelected={handleVenueSelect}
                 />
 
-                {loading ? (
+                {loading && filteredLocations.length === 0 ? (
                     <View style={styles.loadingWrapper}>
                         <ActivityIndicator size="large" color={theme.tint} />
                     </View>
@@ -94,6 +110,11 @@ export default function HomeScreen() {
                     <LocationCardList
                         data={filteredLocations}
                         selectedVenue={selectedVenue}
+                        hasMore={hasMore}
+                        onLoadMore={loadMoreScreens}
+                        canLoadLess={canLoadLess}
+                        onLoadLess={loadLessScreens}
+                        loadingMore={loading && filteredLocations.length > 0}
                     />
                 )}
             </ScrollView>
@@ -104,6 +125,26 @@ export default function HomeScreen() {
                 item={activeLocation}
                 theme={theme}
                 isTablet={isTablet}
+            />
+
+            {/* Review Prompts */}
+            <ReviewPromptModal
+                visible={!!promptOrder && !isReviewModalVisible}
+                order={promptOrder}
+                onReview={handleLeaveReview}
+                onRemind={handleRemindLater}
+                onDismiss={handleDismiss}
+            />
+
+            <LeaveReviewModal
+                visible={isReviewModalVisible}
+                orderId={promptOrder?.id || null}
+                onClose={() => setIsReviewModalVisible(false)}
+                onSuccess={() => {
+                    setIsReviewModalVisible(false);
+                    // Mark as reminded so it sets the timestamp, effectively completing it.
+                    handleRemindLater();
+                }}
             />
         </View>
     );

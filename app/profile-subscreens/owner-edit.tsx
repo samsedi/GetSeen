@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -12,15 +12,15 @@ import {
     useWindowDimensions,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchProfile, updateProfile, uploadAvatar } from '@/api/profileService';
-import { useFormCacheStore } from '@/store/useFormCacheStore';
 import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
 import { useAppTheme } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useAlertStore } from '@/store/useAlertStore';
+import { useFormCacheStore } from '@/store/useFormCacheStore';
 
 export default function OwnerEditProfileScreen() {
     const { width } = useWindowDimensions();
@@ -40,16 +40,16 @@ export default function OwnerEditProfileScreen() {
     const [form, setForm] = useState(() => {
         const cached = useFormCacheStore.getState().cache['ownerProfileEdit'];
         return cached || {
-            companyName: '',
-            phoneNumber: '',
-            businessRegNo: '',
+            company_name: '',
+            phone: '',
+            business_reg_no: '',
             industry: '',
-            bankName: '',
-            accountNumber: '',
-            accountName: '',
-            facebook: '',
-            instagram: '',
-            tiktok: ''
+            bank_name: '',
+            account_number: '',
+            account_name: '',
+            fb_url: '',
+            ig_url: '',
+            tiktok_url: ''
         };
     });
 
@@ -69,22 +69,28 @@ export default function OwnerEditProfileScreen() {
                 const cached = useFormCacheStore.getState().cache['ownerProfileEdit'];
                 if (!cached) {
                     setForm({
-                        companyName: data.companyName || '',
-                        phoneNumber: data.phoneNumber || '',
-                        businessRegNo: data.businessRegNo || data.taxId || '',
-                        industry: data.industry || data.category || '',
-                        bankName: data.bankName || '',
-                        accountNumber: data.accountNumber || '',
-                        accountName: data.accountName || '',
-                        facebook: data.facebook || '',
-                        instagram: data.instagram || '',
-                        tiktok: data.tiktok || ''
+                        company_name: data.company_name || '',
+                        phone: data.phone || '',
+                        business_reg_no: data.business_reg_no || '',
+                        industry: data.industry || '',
+                        bank_name: data.bank_name || '',
+                        account_number: data.account_number || '',
+                        account_name: data.account_name || '',
+                        fb_url: data.fb_url || '',
+                        ig_url: data.ig_url || '',
+                        tiktok_url: data.tiktok_url || ''
                     });
                 }
                 if (data.avatarUrl) {
                     setImageUrl(data.avatarUrl);
                 } else {
-                    setImageUrl("https://ui-avatars.com/api/?name=" + (data.companyName || 'Owner') + "&background=random");
+                    const getInitials = (company?: string) => {
+                        if (!company) return 'OW';
+                        const parts = company.trim().split(/\s+/);
+                        if (parts.length > 1) return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+                        return company.substring(0, 2).toUpperCase();
+                    };
+                    setImageUrl(`https://ui-avatars.com/api/?name=${getInitials(data.company_name)}&background=random&length=2`);
                 }
             } catch (error) {
                 console.error("Failed to load profile:", error);
@@ -126,16 +132,16 @@ export default function OwnerEditProfileScreen() {
         setLoading(true);
         try {
             await updateProfile(role || 'owner', {
-                companyName: form.companyName,
-                phoneNumber: form.phoneNumber,
-                businessRegNo: form.businessRegNo,
+                company_name: form.company_name,
+                phone: form.phone,
+                business_reg_no: form.business_reg_no,
                 industry: form.industry,
-                bankName: form.bankName,
-                accountNumber: form.accountNumber,
-                accountName: form.accountName,
-                facebook: form.facebook,
-                instagram: form.instagram,
-                tiktok: form.tiktok,
+                bank_name: form.bank_name,
+                account_number: form.account_number,
+                account_name: form.account_name,
+                fb_url: form.fb_url,
+                ig_url: form.ig_url,
+                tiktok_url: form.tiktok_url,
             });
             useFormCacheStore.getState().clearFormCache('ownerProfileEdit');
             useAlertStore.getState().showAlert("Success", "Profile updated successfully.");
@@ -175,9 +181,9 @@ export default function OwnerEditProfileScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAwareScrollView 
-                style={{ flex: 1 }} 
-                contentContainerStyle={styles.scrollContent} 
+            <KeyboardAwareScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 enableOnAndroid={true}
                 extraScrollHeight={20}
@@ -210,8 +216,8 @@ export default function OwnerEditProfileScreen() {
                     <View style={styles.formGroup}>
                         <AuthInputField
                             label="Company Name"
-                            value={form.companyName}
-                            onChangeText={(val) => setForm({ ...form, companyName: val })}
+                            value={form.company_name}
+                            onChangeText={(val) => setForm({ ...form, company_name: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -219,10 +225,10 @@ export default function OwnerEditProfileScreen() {
                         />
                         <AuthInputField
                             label="Phone Number"
-                            value={form.phoneNumber}
+                            value={form.phone}
                             keyboardType="phone-pad"
-                            maxLength={form.phoneNumber?.startsWith('+234') ? 14 : form.phoneNumber?.startsWith('0') ? 11 : 15}
-                            onChangeText={(val) => setForm({ ...form, phoneNumber: val })}
+                            maxLength={form.phone?.startsWith('+234') ? 14 : form.phone?.startsWith('0') ? 11 : 15}
+                            onChangeText={(val) => setForm({ ...form, phone: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -237,8 +243,8 @@ export default function OwnerEditProfileScreen() {
                     <View style={styles.formGroup}>
                         <AuthInputField
                             label="Business Reg No"
-                            value={form.businessRegNo}
-                            onChangeText={(val) => setForm({ ...form, businessRegNo: val })}
+                            value={form.business_reg_no}
+                            onChangeText={(val) => setForm({ ...form, business_reg_no: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -263,8 +269,8 @@ export default function OwnerEditProfileScreen() {
                     <View style={styles.formGroup}>
                         <AuthInputField
                             label="Bank Name"
-                            value={form.bankName}
-                            onChangeText={(val) => setForm({ ...form, bankName: val })}
+                            value={form.bank_name}
+                            onChangeText={(val) => setForm({ ...form, bank_name: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -272,9 +278,9 @@ export default function OwnerEditProfileScreen() {
                         />
                         <AuthInputField
                             label="Account Number"
-                            value={form.accountNumber}
+                            value={form.account_number}
                             keyboardType="numeric"
-                            onChangeText={(val) => setForm({ ...form, accountNumber: val })}
+                            onChangeText={(val) => setForm({ ...form, account_number: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -282,8 +288,8 @@ export default function OwnerEditProfileScreen() {
                         />
                         <AuthInputField
                             label="Account Name"
-                            value={form.accountName}
-                            onChangeText={(val) => setForm({ ...form, accountName: val })}
+                            value={form.account_name}
+                            onChangeText={(val) => setForm({ ...form, account_name: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -298,8 +304,8 @@ export default function OwnerEditProfileScreen() {
                     <View style={styles.formGroup}>
                         <AuthInputField
                             label="Facebook"
-                            value={form.facebook}
-                            onChangeText={(val) => setForm({ ...form, facebook: val })}
+                            value={form.fb_url}
+                            onChangeText={(val) => setForm({ ...form, fb_url: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -309,8 +315,8 @@ export default function OwnerEditProfileScreen() {
                         />
                         <AuthInputField
                             label="Instagram"
-                            value={form.instagram}
-                            onChangeText={(val) => setForm({ ...form, instagram: val })}
+                            value={form.ig_url}
+                            onChangeText={(val) => setForm({ ...form, ig_url: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -320,8 +326,8 @@ export default function OwnerEditProfileScreen() {
                         />
                         <AuthInputField
                             label="TikTok"
-                            value={form.tiktok}
-                            onChangeText={(val) => setForm({ ...form, tiktok: val })}
+                            value={form.tiktok_url}
+                            onChangeText={(val) => setForm({ ...form, tiktok_url: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -330,6 +336,19 @@ export default function OwnerEditProfileScreen() {
                             placeholder="https://tiktok.com/@..."
                         />
                     </View>
+                </View>
+
+                {/* SECURITY */}
+                <View style={styles.sectionCard}>
+                    <SectionHeader title="Security" />
+                    <TouchableOpacity 
+                        style={[styles.changePasswordBtn, { backgroundColor: colorScheme === 'dark' ? '#2A2A2A' : '#F5F5F5' }]} 
+                        onPress={() => router.push('/profile-subscreens/change-password')}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="lock-closed-outline" size={20} color={activeTint} />
+                        <Text style={[styles.changePasswordText, { color: activeTint }]}>Change Password</Text>
+                    </TouchableOpacity>
                 </View>
 
             </KeyboardAwareScrollView>
@@ -372,6 +391,8 @@ const styles = StyleSheet.create({
     sectionSubtitle: { fontSize: 13 },
 
     formGroup: { gap: 15 },
+    changePasswordBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12 },
+    changePasswordText: { fontWeight: '600', fontSize: 16, marginLeft: 8 },
 
     footer: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, gap: 12 },
     cancelBtn: { flex: 1, height: 50, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

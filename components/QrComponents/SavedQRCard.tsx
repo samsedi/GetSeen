@@ -9,8 +9,8 @@ export const SavedQRCard = ({ qr, theme, onDownload, onView, onReport, onDelete 
                 <Ionicons name="qr-code" size={20} color="#2B4373" />
             </View>
             <View style={styles.historyInfo}>
-                <Text style={[styles.historyTitle, { color: theme.text }]}>{qr.name}</Text>
-                <Text style={styles.historyDate}>{qr.createdAt}</Text>
+                <Text style={[styles.historyTitle, { color: theme.text }]}>{qr.name || 'Untitled QR Code'}</Text>
+                <Text style={styles.historyDate}>{qr.created_at ? new Date(qr.created_at).toLocaleDateString() : 'N/A'}</Text>
             </View>
         </View>
 

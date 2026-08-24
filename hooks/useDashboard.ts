@@ -2,9 +2,14 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { clearCache } from '@/api/cacheService';
 
-import screenApi, { ScreenResponseDto, ScreenDraftResponseDto } from '@/api/screenService';
-import { fetchOwnerBookings, CampaignData } from '@/api/campaignService';
+import { OwnerBooking } from '@/api/ownerBookingService';
+import { useOwnerBookingStore } from '@/store/useOwnerBookingStore';
 import { ScreenItem } from '@/components/ScreenOwnerComponents/DashboardComponents/ScreenCard';
+
+import { useOwnerScreenStore } from '@/store/useOwnerScreenStore';
+import { OwnerScreenResponse } from '@/api/ownerScreenService';
+import { useOwnerWalletStore } from '@/store/useOwnerWalletStore';
+import { useOwnerDashboardStore } from '@/store/useOwnerDashboardStore';
 
 export type DashboardTab = 'ACTIVE' | 'DRAFTS';
 
@@ -18,164 +23,100 @@ export interface DashboardOverviewStats {
 // --------------------------------------------------------------------------
 // Pure Mappers
 // --------------------------------------------------------------------------
-const mapActiveScreen = (s: ScreenResponseDto): ScreenItem => ({
-    id: s.id,
-    name: s.name,
-    status: s.active ? 'Online' : 'Offline',
-    location: s.address || 'No location set',
-    resolution: s.resolution || 'TBD',
+// Drafts aren't a separate resource — they're screens with status "draft"
+// returned by the same /screen-owner/screens list.
+const mapActiveScreen = (s: OwnerScreenResponse): ScreenItem => ({
+    id: String(s?.id || ''),
+    name: s?.title || 'Untitled Screen',
+    status: s?.status === 'draft' ? 'Draft' : s?.status === 'online' ? 'Online' : 'Offline',
+    location: s?.address || 'No location set',
+    resolution: s?.dimensions || 'TBD',
     activeAds: 0,
-    images: s.mediaUrls && s.mediaUrls.length > 0 ? s.mediaUrls : [],
-    verificationStatus: s.verificationStatus || 'PENDING',
-});
-
-const mapDraftScreen = (d: ScreenDraftResponseDto): ScreenItem => ({
-    id: d.id,
-    name: d.name || 'Untitled Draft',
-    status: 'Draft',
-    location: d.address || 'Location pending',
-    resolution: d.resolution || 'TBD',
-    activeAds: 0,
-    images: d.mediaUrls && d.mediaUrls.length > 0 ? d.mediaUrls : [],
-    verificationStatus: 'DRAFT',
+    images: s?.primary_image_url ? [s.primary_image_url] : [],
+    verificationStatus: s?.status === 'draft' ? 'DRAFT' : s?.review === 'approved' ? 'APPROVED' : 'PENDING',
 });
 
 // --------------------------------------------------------------------------
-// Isolated Try/Catch Fetcher
+// Stat Calculation Helpers
 // --------------------------------------------------------------------------
-const fetchDashboardDataSafely = async (): Promise<{ screens: ScreenItem[], stats: DashboardOverviewStats }> => {
-    try {
-        const [activeData, draftData, campaignsData] = await Promise.all([
-            screenApi.getMyScreens(),
-            screenApi.getMyDrafts(),
-            fetchOwnerBookings(),
-        ]);
-
-        const formattedActive = activeData.map(mapActiveScreen);
-        const formattedDrafts = draftData.map(mapDraftScreen);
-        const allScreens = [...formattedActive, ...formattedDrafts];
-
-        const activeScreensCount = activeData.filter(s => s.active).length;
-        
-        let rawEarnings = 0;
-        let rawPaid = 0;
-
-        // Same weekly logic as the wallet: A week's earnings are paid if all its campaigns are COMPLETED.
-        const weeklyMap = new Map<string, { earnings: number, allCompleted: boolean }>();
-
-        campaignsData.forEach(c => {
-            if (c.status === 'REJECTED') return;
-            
-            rawEarnings += (c.pricePaid || 0);
-
-            const date = new Date(c.endDate);
-            if (isNaN(date.getTime())) return;
-
-            const day = date.getDay();
-            const diffToMonday = date.getDate() - day + (day === 0 ? -6 : 1);
-            const monday = new Date(date.getTime());
-            monday.setDate(diffToMonday);
-            
-            const screenId = c.screen?.id;
-            const weekKey = `${screenId}-${monday.toISOString().split('T')[0]}`;
-
-            if (!weeklyMap.has(weekKey)) {
-                weeklyMap.set(weekKey, { earnings: 0, allCompleted: true });
-            }
-
-            const weekData = weeklyMap.get(weekKey)!;
-            weekData.earnings += (c.pricePaid || 0);
-            if (c.status !== 'COMPLETED') {
-                weekData.allCompleted = false;
-            }
-        });
-
-        // Sum up the paid weeks
-        Array.from(weeklyMap.values()).forEach(weekData => {
-            if (weekData.allCompleted) {
-                rawPaid += weekData.earnings;
-            }
-        });
-
-        const rawPending = rawEarnings - rawPaid;
-
-        const formatAmount = (amount: number) => `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-        return {
-            screens: allScreens,
-            stats: {
-                activeScreens: activeScreensCount,
-                totalEarnings: formatAmount(rawEarnings),
-                totalPaid: formatAmount(rawPaid),
-                pendingPayout: formatAmount(rawPending)
-            }
-        };
-    } catch (error) {
-        console.log('Failed to fetch dashboard data:', error);
-        return {
-            screens: [],
-            stats: {
-                activeScreens: 0,
-                totalEarnings: '₦0.00',
-                totalPaid: '₦0.00',
-                pendingPayout: '₦0.00'
-            }
-        };
-    }
-};
+// Deleted calculateBookingStats
 
 // --------------------------------------------------------------------------
 // Hook
 // --------------------------------------------------------------------------
 export function useDashboard() {
-    const [screens, setScreens] = useState<ScreenItem[]>([]);
-    const [stats, setStats] = useState<DashboardOverviewStats>({
-        activeScreens: 0,
-        totalEarnings: '₦0.00',
-        totalPaid: '₦0.00',
-        pendingPayout: '₦0.00'
-    });
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
+    // Zustand stores
+    const { screens: ownerScreens, fetchScreens, refreshScreens: refreshZustandScreens, loading: screensLoading, refreshing: screensRefreshing } = useOwnerScreenStore();
+    const { bookings, fetchBookings, refreshBookings } = useOwnerBookingStore();
+    const { earnings, fetchEarnings, refreshWallet } = useOwnerWalletStore();
+    const { dashboardData, fetchDashboard } = useOwnerDashboardStore();
+    
+    const [loadingSecondary, setLoadingSecondary] = useState(true);
+    const [refreshingSecondary, setRefreshingSecondary] = useState(false);
     const [activeTab, setActiveTab] = useState<DashboardTab>('ACTIVE');
 
     const hasFetchedInitially = useRef(false);
 
     const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        clearCache('screens_my');
-        clearCache('campaigns_owner');
-        // Drafts don't have caching implemented currently, but safe to fetch
-        const data = await fetchDashboardDataSafely();
-        setScreens(data.screens);
-        setStats(data.stats);
-        setRefreshing(false);
-    }, []);
+        setRefreshingSecondary(true);
+        clearCache('campaigns_owner'); // Left over cache clear if needed elsewhere
 
-    const fetchAllScreens = useCallback(async (showSpinner = true) => {
-        if (showSpinner) setLoading(true);
+        await Promise.all([
+            refreshZustandScreens(),
+            refreshBookings(),
+            refreshWallet(),
+            fetchDashboard(true),
+        ]);
 
-        const data = await fetchDashboardDataSafely();
-        setScreens(data.screens);
-        setStats(data.stats);
-        setLoading(false);
-    }, []);
+        setRefreshingSecondary(false);
+    }, [refreshZustandScreens, refreshBookings, refreshWallet, fetchDashboard]);
+
+    const fetchAllData = useCallback(async (showSpinner = true) => {
+        if (showSpinner) {
+            setLoadingSecondary(true);
+        }
+
+        await Promise.all([
+            fetchScreens({ forceRefresh: showSpinner }),
+            fetchBookings({ forceRefresh: showSpinner }),
+            fetchEarnings(showSpinner),
+            fetchDashboard(showSpinner),
+        ]);
+
+        setLoadingSecondary(false);
+    }, [fetchScreens, fetchBookings, fetchEarnings, fetchDashboard]);
 
     useFocusEffect(
         useCallback(() => {
             if (!hasFetchedInitially.current) {
-                fetchAllScreens(true);
+                fetchAllData(true);
                 hasFetchedInitially.current = true;
             } else {
-                fetchAllScreens(false);
+                fetchAllData(false);
             }
-        }, [fetchAllScreens])
+        }, [fetchAllData])
     );
 
     const [searchQuery, setSearchQuery] = useState('');
 
+    const allScreens = useMemo(() => {
+        const validScreens = (ownerScreens || []).filter(s => s !== null && s !== undefined);
+        return validScreens.map(mapActiveScreen);
+    }, [ownerScreens]);
+
+    // Calculate dynamic stats
+    const stats = useMemo(() => {
+        const formatAmount = (amount: number) => `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        return {
+            totalEarnings: formatAmount(dashboardData?.earnings?.total_earnings || 0),
+            totalPaid: formatAmount(dashboardData?.earnings?.total_paid || 0),
+            pendingPayout: formatAmount(dashboardData?.earnings?.pending_payout || 0),
+            activeScreens: dashboardData?.screens?.active || 0
+        };
+    }, [dashboardData]);
+
     const displayedScreens = useMemo(() => {
-        let result = screens;
+        let result = allScreens;
         
         if (activeTab === 'DRAFTS') {
             result = result.filter((s) => s.status === 'Draft');
@@ -193,16 +134,20 @@ export function useDashboard() {
         }
 
         return result;
-    }, [screens, activeTab, searchQuery]);
+    }, [allScreens, activeTab, searchQuery]);
+
+    const loading = screensLoading || loadingSecondary;
+    const refreshing = screensRefreshing || refreshingSecondary;
 
     return {
-        screens,
+        screens: allScreens,
         displayedScreens,
         stats,
+        onboarding: dashboardData?.onboarding,
         loading,
         activeTab,
         setActiveTab,
-        fetchAllScreens,
+        fetchAllScreens: fetchAllData,
         searchQuery,
         setSearchQuery,
         refreshing,

@@ -1,25 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     StyleSheet,
-    View,
     Text,
     TouchableOpacity,
     useColorScheme,
     useWindowDimensions,
-    ActivityIndicator
+    View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAppTheme } from '@/constants/theme';
-import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
-import { useAlertStore } from '@/store/useAlertStore';
-import { useAuthStore } from '@/store/authStore';
 import { fetchProfile, updateProfile, uploadAvatar } from '@/api/profileService';
+import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
+import { useAppTheme } from '@/constants/theme';
+import { useAuthStore } from '@/store/authStore';
+import { useAlertStore } from '@/store/useAlertStore';
 import { useFormCacheStore } from '@/store/useFormCacheStore';
 
 export default function EditProfileScreen() {
@@ -29,7 +29,7 @@ export default function EditProfileScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const router = useRouter();
     const role = useAuthStore(state => state.role);
-    
+
     const activeTint = role === 'advertiser' ? theme.tint : theme.brandNavy;
 
     const [loading, setLoading] = useState(false);
@@ -40,15 +40,16 @@ export default function EditProfileScreen() {
     const [form, setForm] = useState(() => {
         const cached = useFormCacheStore.getState().cache['profileEdit'];
         return cached || {
-            firstName: '',
-            lastName: '',
-            companyName: '',
+            first_name: '',
+            last_name: '',
+            business_name: '',
+            business_reg_no: '',
+            industry: '',
             phone: '',
-            city: '',
-            country: '',
-            category: '',
-            taxId: '',
-            bankDetails: ''
+            country_id: 234,
+            fb_url: '',
+            ig_url: '',
+            tiktok_url: ''
         };
     });
 
@@ -68,21 +69,28 @@ export default function EditProfileScreen() {
                 const cached = useFormCacheStore.getState().cache['profileEdit'];
                 if (!cached) {
                     setForm({
-                        firstName: data.firstName || '',
-                        lastName: data.lastName || '',
-                        companyName: data.companyName || '',
-                        phone: data.phoneNumber || '',
-                        city: data.city || '',
-                        country: data.country || '',
-                        category: data.category || '',
-                        taxId: data.taxId || '',
-                        bankDetails: data.bankDetails || ''
+                        first_name: data.first_name || '',
+                        last_name: data.last_name || '',
+                        business_name: data.business_name || '',
+                        business_reg_no: data.business_reg_no || '',
+                        industry: data.industry || '',
+                        phone: data.phone || '',
+                        country_id: data.country_id || 234,
+                        fb_url: data.fb_url || '',
+                        ig_url: data.ig_url || '',
+                        tiktok_url: data.tiktok_url || ''
                     });
                 }
                 if (data.avatarUrl) {
                     setImageUrl(data.avatarUrl);
                 } else {
-                    setImageUrl("https://ui-avatars.com/api/?name=" + (data.firstName || data.companyName || 'User') + "&background=random");
+                    const getInitials = (first?: string, last?: string, biz?: string) => {
+                        if (first && last) return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+                        if (first) return first.substring(0, 2).toUpperCase();
+                        if (biz) return biz.substring(0, 2).toUpperCase();
+                        return 'US';
+                    };
+                    setImageUrl(`https://ui-avatars.com/api/?name=${getInitials(data.first_name, data.last_name, data.business_name)}&background=random&length=2`);
                 }
             } catch (error) {
                 console.error("Failed to load profile:", error);
@@ -124,15 +132,16 @@ export default function EditProfileScreen() {
         setLoading(true);
         try {
             await updateProfile(role || 'advertiser', {
-                firstName: form.firstName,
-                lastName: form.lastName,
-                companyName: form.companyName,
-                phoneNumber: form.phone,
-                city: form.city,
-                country: form.country,
-                category: form.category,
-                taxId: form.taxId,
-                bankDetails: form.bankDetails
+                first_name: form.first_name,
+                last_name: form.last_name,
+                business_name: form.business_name,
+                business_reg_no: form.business_reg_no,
+                industry: form.industry,
+                phone: form.phone,
+                country_id: form.country_id,
+                fb_url: form.fb_url,
+                ig_url: form.ig_url,
+                tiktok_url: form.tiktok_url
             });
             useFormCacheStore.getState().clearFormCache('profileEdit');
             useAlertStore.getState().showAlert("Success", "Profile updated successfully.");
@@ -159,21 +168,21 @@ export default function EditProfileScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={activeTint} />
                 </TouchableOpacity>
-                <View style={{position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1}}>
+                <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: -1 }}>
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Edit Profile</Text>
                 </View>
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAwareScrollView 
-                style={{ flex: 1 }} 
-                contentContainerStyle={styles.scrollContent} 
+            <KeyboardAwareScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 enableOnAndroid={true}
                 extraScrollHeight={20}
                 keyboardShouldPersistTaps="handled"
             >
-                
+
                 <View style={styles.avatarContainer}>
                     <View style={styles.avatarWrapper}>
                         <Image source={{ uri: imageUrl }} style={styles.avatar} />
@@ -183,8 +192,8 @@ export default function EditProfileScreen() {
                             </View>
                         )}
                         {!isUploading && (
-                            <TouchableOpacity 
-                                style={[styles.editBadge, { backgroundColor: activeTint, borderColor: theme.background }]} 
+                            <TouchableOpacity
+                                style={[styles.editBadge, { backgroundColor: activeTint, borderColor: theme.background }]}
                                 onPress={handlePickImage}
                                 activeOpacity={0.8}
                             >
@@ -201,8 +210,8 @@ export default function EditProfileScreen() {
                             <AuthInputField
                                 containerStyle={{ flex: 1 }}
                                 label="First Name"
-                                value={form.firstName}
-                                onChangeText={(val) => setForm({ ...form, firstName: val })}
+                                value={form.first_name}
+                                onChangeText={(val) => setForm({ ...form, first_name: val })}
                                 inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                                 labelColor={theme.text}
                                 textColor={theme.text}
@@ -211,8 +220,8 @@ export default function EditProfileScreen() {
                             <AuthInputField
                                 containerStyle={{ flex: 1 }}
                                 label="Last Name"
-                                value={form.lastName}
-                                onChangeText={(val) => setForm({ ...form, lastName: val })}
+                                value={form.last_name}
+                                onChangeText={(val) => setForm({ ...form, last_name: val })}
                                 inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                                 labelColor={theme.text}
                                 textColor={theme.text}
@@ -222,9 +231,9 @@ export default function EditProfileScreen() {
                     )}
 
                     <AuthInputField
-                        label={role === 'owner' ? "Company / Venue Name" : "Business Name (Optional)"}
-                        value={form.companyName}
-                        onChangeText={(val) => setForm({ ...form, companyName: val })}
+                        label="Business Name (Optional)"
+                        value={form.business_name}
+                        onChangeText={(val) => setForm({ ...form, business_name: val })}
                         inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                         labelColor={theme.text}
                         textColor={theme.text}
@@ -246,9 +255,9 @@ export default function EditProfileScreen() {
                     <View style={styles.row}>
                         <AuthInputField
                             containerStyle={{ flex: 1 }}
-                            label="City"
-                            value={form.city}
-                            onChangeText={(val) => setForm({ ...form, city: val })}
+                            label="Business Reg No"
+                            value={form.business_reg_no}
+                            onChangeText={(val) => setForm({ ...form, business_reg_no: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -256,9 +265,32 @@ export default function EditProfileScreen() {
                         />
                         <AuthInputField
                             containerStyle={{ flex: 1 }}
-                            label="Country"
-                            value={form.country}
-                            onChangeText={(val) => setForm({ ...form, country: val })}
+                            label="Industry"
+                            value={form.industry}
+                            onChangeText={(val) => setForm({ ...form, industry: val })}
+                            inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
+                            labelColor={theme.text}
+                            textColor={theme.text}
+                            borderColor={theme.border}
+                        />
+                    </View>
+
+                    <View style={styles.row}>
+                        <AuthInputField
+                            containerStyle={{ flex: 1 }}
+                            label="Facebook URL"
+                            value={form.fb_url}
+                            onChangeText={(val) => setForm({ ...form, fb_url: val })}
+                            inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
+                            labelColor={theme.text}
+                            textColor={theme.text}
+                            borderColor={theme.border}
+                        />
+                        <AuthInputField
+                            containerStyle={{ flex: 1 }}
+                            label="Instagram URL"
+                            value={form.ig_url}
+                            onChangeText={(val) => setForm({ ...form, ig_url: val })}
                             inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                             labelColor={theme.text}
                             textColor={theme.text}
@@ -267,36 +299,23 @@ export default function EditProfileScreen() {
                     </View>
 
                     <AuthInputField
-                        label="Tax ID"
-                        value={form.taxId}
-                        onChangeText={(val) => setForm({ ...form, taxId: val })}
+                        label="Tiktok URL"
+                        value={form.tiktok_url}
+                        onChangeText={(val) => setForm({ ...form, tiktok_url: val })}
                         inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
                         labelColor={theme.text}
                         textColor={theme.text}
                         borderColor={theme.border}
                     />
 
-                    <AuthInputField
-                        label="Business Category"
-                        value={form.category}
-                        onChangeText={(val) => setForm({ ...form, category: val })}
-                        inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
-                        labelColor={theme.text}
-                        textColor={theme.text}
-                        borderColor={theme.border}
-                    />
-
-                    {role === 'owner' && (
-                        <AuthInputField
-                            label="Bank Details"
-                            value={form.bankDetails}
-                            onChangeText={(val) => setForm({ ...form, bankDetails: val })}
-                            inputBgColor={colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF'}
-                            labelColor={theme.text}
-                            textColor={theme.text}
-                            borderColor={theme.border}
-                        />
-                    )}
+                    <TouchableOpacity 
+                        style={[styles.changePasswordBtn, { backgroundColor: colorScheme === 'dark' ? '#2A2A2A' : '#F5F5F5' }]} 
+                        onPress={() => router.push('/profile-subscreens/change-password')}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="lock-closed-outline" size={20} color={activeTint} />
+                        <Text style={[styles.changePasswordText, { color: activeTint }]}>Change Password</Text>
+                    </TouchableOpacity>
                 </View>
 
             </KeyboardAwareScrollView>
@@ -327,6 +346,8 @@ const styles = StyleSheet.create({
     avatarHint: { marginTop: 12, fontSize: 13, fontWeight: '500' },
     formContainer: { gap: 15 },
     row: { flexDirection: 'row', gap: 15 },
+    changePasswordBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, paddingVertical: 14, borderRadius: 12 },
+    changePasswordText: { fontWeight: '600', fontSize: 16, marginLeft: 8 },
     footer: { paddingHorizontal: 24, paddingVertical: 16, borderTopWidth: 1 },
     saveBtn: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     saveBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },

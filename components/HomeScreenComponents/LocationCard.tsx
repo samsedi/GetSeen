@@ -10,7 +10,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { Image } from 'expo-image';
-import VideoPlayerItem from '@/components/VideoPlayerItem';
 import { ScreenResponseDto } from '@/api/screenService';
 import { useLocationCard } from '@/hooks/useLocationCard';
 
@@ -18,17 +17,24 @@ type Theme = typeof Colors.light;
 
 interface LocationCardProps {
     item: ScreenResponseDto;
+    numColumns?: number;
 }
 
-function LocationCard({ item }: LocationCardProps) {
+function LocationCard({ item, numColumns = 1 }: LocationCardProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme as 'light' | 'dark'];
-    const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
+    const styles = useMemo(() => createStyles(isTablet, theme, numColumns), [isTablet, theme, numColumns]);
 
-    const cardWidth = isTablet ? 220 : 180;
-    const cardHeight = isTablet ? 140 : 120;
+    // If numColumns is > 1 (Grid view), calculate dynamic width. Otherwise, use fixed carousel width.
+    const containerPadding = 40; // 20 left + 20 right
+    const gapTotal = (numColumns - 1) * 10;
+    const dynamicWidth = (width - containerPadding - gapTotal) / numColumns;
+    
+    const cardWidth = numColumns > 1 ? dynamicWidth : (isTablet ? 220 : 180);
+    const cardHeight = numColumns > 1 ? (isTablet ? 140 : 100) : (isTablet ? 140 : 120);
+
 
     const {
         activeIndex,
@@ -50,22 +56,34 @@ function LocationCard({ item }: LocationCardProps) {
                     {validMediaUrls.length > 0 ? (
                         (() => {
                             const activeUrl = validMediaUrls[activeIndex];
-                            const isVideo = activeUrl.toLowerCase().includes('.mp4');
-                            return isVideo ? (
-                                <VideoPlayerItem
-                                    uri={activeUrl}
-                                    style={{ width: cardWidth, height: cardHeight }}
-                                    onFinish={handleVideoEnd}
-                                    shouldPlay={true}
-                                />
-                            ) : (
-                                <Image
-                                    source={{ uri: activeUrl }}
-                                    style={{ width: cardWidth, height: cardHeight }}
-                                    contentFit="cover"
-                                    cachePolicy="disk"
-                                    transition={300}
-                                />
+                            const isVideo = activeUrl.toLowerCase().includes('.mp4') ||
+                                            activeUrl.toLowerCase().includes('.mov') ||
+                                            activeUrl.toLowerCase().includes('.webm');
+
+                            // For videos in the list: show the FIRST image as a thumbnail.
+                            // The video only plays inside the View Details page.
+                            const thumbnailUrl = isVideo
+                                ? (validMediaUrls.find(u => !u.toLowerCase().includes('.mp4') && !u.toLowerCase().includes('.mov') && !u.toLowerCase().includes('.webm')) ?? null)
+                                : activeUrl;
+
+                            return (
+                                <>
+                                    <Image
+                                        source={thumbnailUrl ? { uri: thumbnailUrl } : require('@/assets/images/resturant.jpg')}
+                                        style={{ width: cardWidth, height: cardHeight }}
+                                        contentFit="cover"
+                                        cachePolicy="disk"
+                                        transition={300}
+                                    />
+                                    {/* Play button overlay for video cards */}
+                                    {isVideo && (
+                                        <View style={styles.playButtonOverlay}>
+                                            <View style={styles.playButton}>
+                                                <Ionicons name="play" size={numColumns > 1 ? 12 : 16} color="white" />
+                                            </View>
+                                        </View>
+                                    )}
+                                </>
                             );
                         })()
                     ) : (
@@ -107,7 +125,7 @@ function LocationCard({ item }: LocationCardProps) {
                     </Text>
                     <View style={styles.ratingPill}>
                         <Ionicons name="star" size={10} color="#FFD700" />
-                        <Text style={styles.ratingText}>4.9</Text>
+                        <Text style={styles.ratingText}>{item.rating && item.rating.count > 0 ? item.rating.average.toFixed(1) : 'New'}</Text>
                     </View>
                 </View>
 
@@ -131,11 +149,11 @@ function LocationCard({ item }: LocationCardProps) {
 
 export default React.memo(LocationCard);
 
-const createStyles = (isTablet: boolean, theme: Theme) =>
+const createStyles = (isTablet: boolean, theme: Theme, numColumns: number) =>
     StyleSheet.create({
         card: {
             marginBottom: 15,
-            marginRight: isTablet ? 12 : 10,
+            marginRight: numColumns > 1 ? 0 : (isTablet ? 12 : 10),
         },
         imageWrapper: {
             width: '100%',
@@ -156,7 +174,7 @@ const createStyles = (isTablet: boolean, theme: Theme) =>
         },
         adText: {
             color: 'white',
-            fontSize: 9,
+            fontSize: numColumns > 1 ? 7 : 9,
             fontWeight: '800',
         },
         heartButton: {
@@ -164,9 +182,9 @@ const createStyles = (isTablet: boolean, theme: Theme) =>
             top: 8,
             right: 8,
             backgroundColor: 'rgba(255,255,255,0.9)',
-            width: 26,
-            height: 26,
-            borderRadius: 13,
+            width: numColumns > 1 ? 22 : 26,
+            height: numColumns > 1 ? 22 : 26,
+            borderRadius: numColumns > 1 ? 11 : 13,
             justifyContent: 'center',
             alignItems: 'center',
             elevation: 2,
@@ -186,16 +204,32 @@ const createStyles = (isTablet: boolean, theme: Theme) =>
             zIndex: 2,
         },
         dot: {
-            width: 5,
-            height: 5,
-            borderRadius: 2.5,
+            width: 4,
+            height: 4,
+            borderRadius: 2,
             backgroundColor: 'rgba(255,255,255,0.5)',
         },
         activeDot: {
             backgroundColor: 'white',
-            width: 7,
-            height: 7,
-            borderRadius: 3.5,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+        },
+        playButtonOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 3,
+        },
+        playButton: {
+            width: numColumns > 1 ? 28 : 36,
+            height: numColumns > 1 ? 28 : 36,
+            borderRadius: numColumns > 1 ? 14 : 18,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 1.5,
+            borderColor: 'rgba(255,255,255,0.6)',
         },
         details: {
             paddingTop: 8,
@@ -209,22 +243,22 @@ const createStyles = (isTablet: boolean, theme: Theme) =>
         },
         locationName: {
             flex: 1,
-            fontSize: isTablet ? 14 : 12,
+            fontSize: numColumns > 1 ? (isTablet ? 12 : 10) : (isTablet ? 14 : 12),
             color: theme.text,
             fontWeight: '700',
-            marginRight: 6,
+            marginRight: 4,
         },
         ratingPill: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 2,
             backgroundColor: theme.background,
-            paddingHorizontal: 6,
-            paddingVertical: 3,
+            paddingHorizontal: 4,
+            paddingVertical: 2,
             borderRadius: 20,
         },
         ratingText: {
-            fontSize: 10,
+            fontSize: numColumns > 1 ? 8 : 10,
             fontWeight: '700',
             color: theme.text,
         },
@@ -233,32 +267,33 @@ const createStyles = (isTablet: boolean, theme: Theme) =>
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: 8,
+            flexWrap: 'wrap',
         },
         priceText: {
-            fontSize: isTablet ? 13 : 11,
+            fontSize: numColumns > 1 ? (isTablet ? 11 : 9) : (isTablet ? 13 : 11),
             color: theme.text,
             fontWeight: '700',
         },
         perDay: {
-            fontSize: 10,
+            fontSize: numColumns > 1 ? 8 : 10,
             color: theme.textSecondary,
             fontWeight: '400',
         },
         viewDetailsText: {
-            fontSize: isTablet ? 11 : 10,
+            fontSize: numColumns > 1 ? (isTablet ? 9 : 8) : (isTablet ? 11 : 10),
             color: '#FF2D55',
             fontWeight: '600',
         },
         reserveButton: {
             backgroundColor: '#FF2D55',
-            height: isTablet ? 34 : 30,
+            height: numColumns > 1 ? (isTablet ? 28 : 24) : (isTablet ? 34 : 30),
             borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
         },
         reserveButtonText: {
             color: 'white',
-            fontSize: isTablet ? 12 : 11,
+            fontSize: numColumns > 1 ? (isTablet ? 10 : 9) : (isTablet ? 12 : 11),
             fontWeight: '700',
         },
     });

@@ -97,8 +97,8 @@ function DetailContent({ isTablet, data }: Props) {
 
             {/* 3. LOCATION ROW */}
             <View style={styles.locationRow}>
-                <Ionicons name="location-sharp" size={isTablet ? 14 : 12} color="#FF2D55" />
-                <Text style={styles.locationText} numberOfLines={1}>
+                <Ionicons name="location-sharp" size={isTablet ? 14 : 12} color="#FF2D55" style={{ marginTop: 1 }} />
+                <Text style={styles.locationText}>
                     {[data.address, data.city, data.state].filter(Boolean).join(', ')}
                 </Text>
             </View>
@@ -179,14 +179,17 @@ const createStyles = (isTablet: boolean, theme: AppTheme) =>
         },
         locationRow: {
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-start', 
             marginTop: 8,
             gap: 4,
         },
         locationText: {
+            flex: 1,              
             color: theme.textSecondary,
             fontSize: isTablet ? 13 : 11,
             fontWeight: '500',
+            flexWrap: 'wrap',
+            lineHeight: isTablet ? 20 : 17,
         },
         priceContainer: {
             marginTop: 12,

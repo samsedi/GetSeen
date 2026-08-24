@@ -1,25 +1,27 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
-import { VenueEarningData } from '@/hooks/useWallet';
+import { EarningsSummary } from '@/hooks/useWallet';
 
 interface EarningsViewProps {
-    venueEarnings: VenueEarningData[];
+    earningsSummary: EarningsSummary;
 }
 
-export function EarningsView({ venueEarnings }: EarningsViewProps) {
+export function EarningsView({ earningsSummary }: EarningsViewProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
     const theme = useAppTheme();
     const ownerTint = theme.brandNavy;
-    
+
     const styles = useMemo(() => createStyles(isTablet, theme, ownerTint), [isTablet, theme, ownerTint]);
+
+    const hasEarnings = earningsSummary.totalEarningsRaw > 0;
 
     return (
         <View style={styles.section}>
-            {renderSectionTitle("Venue Earnings Summary", styles.sectionTitle, theme)}
-            {venueEarnings.length === 0 ? renderEmptyState(styles, theme) : renderVenueList(venueEarnings, styles, theme, ownerTint)}
+            {renderSectionTitle("Earnings Summary", styles.sectionTitle, theme)}
+            {hasEarnings ? renderSummaryCard(earningsSummary, styles, theme, ownerTint) : renderEmptyState(styles, theme)}
         </View>
     );
 }
@@ -37,43 +39,32 @@ function renderEmptyState(styles: any, theme: AppTheme) {
     );
 }
 
-function renderVenueList(venues: VenueEarningData[], styles: any, theme: AppTheme, ownerTint: string) {
+function renderSummaryCard(summary: EarningsSummary, styles: any, theme: AppTheme, ownerTint: string) {
     return (
-        <>
-            {venues.map(venue => renderVenueCard(venue, styles, theme, ownerTint))}
-        </>
-    );
-}
-
-function renderVenueCard(venue: VenueEarningData, styles: any, theme: AppTheme, ownerTint: string) {
-    return (
-        <View key={venue.id} style={[styles.dataCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            {renderCardHeader(venue, styles, theme, ownerTint)}
-            {renderCardStatsGrid(venue, styles, theme)}
-            {renderCardFooter(venue, styles, theme, ownerTint)}
+        <View style={[styles.dataCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            {renderCardHeader(styles, theme, ownerTint)}
+            {renderCardStatsGrid(summary, styles, theme)}
         </View>
     );
 }
 
-function renderCardHeader(venue: VenueEarningData, styles: any, theme: AppTheme, ownerTint: string) {
+function renderCardHeader(styles: any, theme: AppTheme, ownerTint: string) {
     return (
         <View style={styles.cardHeader}>
-            <Ionicons name="tv" size={24} color={ownerTint} style={{ marginRight: 12 }} />
+            <Ionicons name="wallet" size={24} color={ownerTint} style={{ marginRight: 12 }} />
             <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>{venue.venueName}</Text>
-                <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>{venue.location}</Text>
+                <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>Earnings Overview</Text>
             </View>
         </View>
     );
 }
 
-function renderCardStatsGrid(venue: VenueEarningData, styles: any, theme: AppTheme) {
+function renderCardStatsGrid(summary: EarningsSummary, styles: any, theme: AppTheme) {
     return (
         <View style={styles.gridContainer}>
-            {renderGridItem("Total Campaigns", venue.totalCampaigns, theme.text, styles, theme)}
-            {renderGridItem("Total Earnings", venue.totalEarnings, theme.text, styles, theme)}
-            {renderGridItem("Pending Payout", venue.pendingPayout, theme.statusWarning, styles, theme)}
-            {renderGridItem("Paid Amount", venue.paidAmount, theme.success, styles, theme)}
+            {renderGridItem("Total Earnings", summary.totalEarnings, theme.text, styles, theme)}
+            {renderGridItem("Pending Payout", summary.pendingPayout, theme.statusWarning, styles, theme)}
+            {renderGridItem("Paid Amount", summary.totalPaid, theme.success, styles, theme)}
         </View>
     );
 }
@@ -84,26 +75,6 @@ function renderGridItem(label: string, value: string | number, valueColor: strin
             <Text style={[styles.gridLabel, { color: theme.textSecondary }]}>{label}</Text>
             <Text style={[styles.gridValue, { color: valueColor }]}>{value}</Text>
         </View>
-    );
-}
-
-function renderCardFooter(venue: VenueEarningData, styles: any, theme: AppTheme, ownerTint: string) {
-    return (
-        <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
-            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-                Last Payout: <Text style={{ color: theme.text, fontWeight: '600' }}>{venue.lastPayout}</Text>
-            </Text>
-            {renderActionBtn("Weekly Breakdown", "calendar-outline", styles, ownerTint)}
-        </View>
-    );
-}
-
-function renderActionBtn(label: string, icon: keyof typeof Ionicons.glyphMap, styles: any, tint: string) {
-    return (
-        <TouchableOpacity style={[styles.actionBtn, { borderColor: tint }]}>
-            <Ionicons name={icon} size={14} color={tint} style={{ marginRight: 6 }} />
-            <Text style={[styles.actionBtnText, { color: tint }]}>{label}</Text>
-        </TouchableOpacity>
     );
 }
 

@@ -1,9 +1,15 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { router } from 'expo-router';
+import { useAuthStore } from '@/store/authStore';
 
-// Use environment variable for production, fallback to local IP for development
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
+// No silent fallback: every build profile (development/preview/production) must set this
+// explicitly in eas.json or .env, so a misconfigured build fails loudly instead of quietly
+// hitting the production API/database.
+if (!process.env.EXPO_PUBLIC_API_URL) {
+    throw new Error(
+        'EXPO_PUBLIC_API_URL is not set. Configure it in .env (local dev) or eas.json (builds).'
+    );
+}
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const apiClient = axios.create({
     baseURL: BASE_URL,
@@ -14,9 +20,10 @@ const apiClient = axios.create({
 });
 
 // --- REQUEST INTERCEPTOR ---
+// Reads the access token synchronously from Zustand (no async SecureStore call needed)
 apiClient.interceptors.request.use(
-    async (config) => {
-        const token = await SecureStore.getItemAsync('userToken');
+    (config) => {
+        const token = useAuthStore.getState().accessToken;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -41,23 +48,21 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // --- EXTRACTED REFRESH LOGIC ---
 const executeRefreshRequest = async (refreshToken: string) => {
-    return await axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
+    return await axios.post(`${BASE_URL}/auth/refresh`, { refresh_token: refreshToken });
 };
 
 const handleRefreshFailure = async () => {
     console.error("Refresh token expired or invalid. Executing smart logout.");
-    await SecureStore.deleteItemAsync('userToken');
-    await SecureStore.deleteItemAsync('refreshToken');
-    await SecureStore.deleteItemAsync('activeRole');
-    router.replace('/');
+    // Use the Zustand logout action which clears everything
+    await useAuthStore.getState().logout();
 };
 
 const handleRefreshSuccess = async (refreshResponse: any, originalRequest: InternalAxiosRequestConfig) => {
-    const newAccessToken = refreshResponse.data.accessToken;
-    const newRefreshToken = refreshResponse.data.refreshToken;
+    const newAccessToken = refreshResponse.data.data.access_token;
+    const newRefreshToken = refreshResponse.data.data.refresh_token;
 
-    await SecureStore.setItemAsync('userToken', newAccessToken);
-    await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+    // Update Zustand + SecureStore in one shot via the store action
+    await useAuthStore.getState().setTokens(newAccessToken, newRefreshToken || undefined);
 
     processQueue(null, newAccessToken);
     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -67,7 +72,7 @@ const handleRefreshSuccess = async (refreshResponse: any, originalRequest: Inter
 
 const attemptTokenRefreshSafely = async (originalRequest: InternalAxiosRequestConfig) => {
     try {
-        const refreshToken = await SecureStore.getItemAsync('refreshToken');
+        const refreshToken = useAuthStore.getState().refreshToken;
         if (!refreshToken) throw new Error("No refresh token available");
 
         const refreshResponse = await executeRefreshRequest(refreshToken);
@@ -110,7 +115,25 @@ apiClient.interceptors.response.use(
             return attemptTokenRefreshSafely(originalRequest);
         }
 
-        const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message;
+        const isServerError = error.response && (error.response.status === 503 || error.response.status === 502 || error.response.status === 504);
+        if (isServerError) {
+            // Use require to avoid circular dependency
+            const { useAppStore } = require('@/store/appStore');
+            useAppStore.getState().setServerDown(true);
+        }
+
+        let errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message;
+        
+        // Extract specific field validation errors if the backend provides them
+        const fields = error.response?.data?.error?.fields;
+        if (fields && typeof fields === 'object') {
+            const fieldMessages = Object.values(fields).join('\n• ');
+            if (fieldMessages) {
+                // If the generic message is just "validation error", this makes it much more helpful
+                errorMessage = `${errorMessage}\n\n• ${fieldMessages}`;
+            }
+        }
+
         return Promise.reject(new Error(errorMessage));
     }
 );

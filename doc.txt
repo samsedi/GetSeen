@@ -1,0 +1,2647 @@
+<USER_REQUEST>
+GetSeen Mobile API Documentation
+Overview
+This document describes the mobile API endpoints for connecting the GetSeen mobile app to the GetSeen backend.
+
+
+The mobile integration currently supports:
+
+Advertisers
+Screen owners
+
+Admin functionality is not included in the current mobile API phases.
+
+Environment
+Base URL:
+
+https://www.trygetseen.com/api/v1
+
+All requests should use JSON:
+
+Content-Type: application/json
+
+Accept: application/json
+
+Protected endpoints require:
+
+Authorization: Bearer <access_token>
+
+Standard Responses
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {}
+
+}
+
+Error response:
+
+{
+
+  "success": false,
+
+  "error": {
+
+    "code": "ERROR_CODE",
+
+    "message": "Human readable error message."
+
+  }
+
+}
+
+Validation error response:
+
+{
+
+  "success": false,
+
+  "error": {
+
+    "code": "VALIDATION_ERROR",
+
+    "message": "The submitted information is invalid.",
+
+    "fields": {
+
+      "email": "A valid email address is required."
+
+    }
+
+  }
+
+}
+Authentication Overview
+The mobile app uses token-based authentication.
+
+After registration or login, the backend returns:
+
+access_token: used on protected API requests.
+refresh_token: used to get a new access token when the old one expires.
+
+The mobile app should store tokens securely using platform secure storage.
+
+Phase 1 Endpoints
+Send Advertiser Signup OTP
+POST /auth/advertiser/send-signup-otp
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "email": "john@example.com"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Verification code sent. Please check your email."
+
+  }
+
+}
+
+Possible errors:
+
+VALIDATION_ERROR
+
+EMAIL_ALREADY_EXISTS
+
+SERVER_ERROR
+
+Send Screen Owner Signup OTP
+POST /auth/screen-owner/send-signup-otp
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "email": "owner@example.com"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Verification code sent. Please check your email."
+
+  }
+
+}
+
+
+Possible errors:
+
+VALIDATION_ERROR
+
+EMAIL_ALREADY_EXISTS
+
+SERVER_ERROR
+
+Register
+POST /auth/register
+
+Authentication: Not required
+
+Advertiser request:
+
+{
+
+  "account_type": "advertiser",
+
+  "first_name": "John",
+
+  "last_name": "Doe",
+
+  "phone": "08012345678",
+
+  "email": "john@example.com",
+
+  "email_otp": "123456",
+
+  "password": "Password123",
+
+  "password_confirmation": "Password123",
+
+  "country_id": 1,
+
+  "device_name": "Samsung Galaxy S23"
+
+}
+
+country_id is optional for advertiser signup. If omitted, the backend uses the first active country configured on the server.
+
+
+
+Screen owner request:
+
+{
+
+  "account_type": "screen_owner",
+
+  "phone": "08012345678",
+
+  "email": "owner@example.com",
+
+  "email_otp": "123456",
+
+  "password": "Password123",
+
+  "password_confirmation": "Password123",
+
+  "device_name": "iPhone 15"
+
+}
+
+
+Success response:
+{
+
+  "success": true,
+
+  "data": {
+
+    "access_token": "ACCESS_TOKEN_HERE",
+
+    "refresh_token": "REFRESH_TOKEN_HERE",
+
+    "user": {
+
+      "id": 15,
+
+      "email": "john@example.com",
+
+      "phone": "08012345678",
+
+      "role": "advertiser",
+
+      "name": "John Doe"
+
+    }
+
+  }
+
+}
+
+
+Possible errors:
+
+VALIDATION_ERROR
+
+EMAIL_ALREADY_EXISTS
+
+INVALID_ACCOUNT_TYPE
+
+INVALID_OTP
+
+Login
+POST /auth/login
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "email": "john@example.com",
+
+  "password": "Password123",
+
+  "account_type": "advertiser",
+
+  "device_name": "Samsung Galaxy S23"
+
+}
+
+
+
+
+
+
+For screen owners, use:
+
+{
+
+  "email": "owner@example.com",
+
+  "password": "Password123",
+
+  "account_type": "screen_owner",
+
+  "device_name": "iPhone 15"
+
+}
+
+
+Success response:
+{
+
+  "success": true,
+
+  "data": {
+
+    "access_token": "ACCESS_TOKEN_HERE",
+
+    "refresh_token": "REFRESH_TOKEN_HERE",
+
+    "user": {
+
+      "id": 15,
+
+      "email": "john@example.com",
+
+      "phone": "08012345678",
+
+      "role": "advertiser",
+
+      "name": "John Doe"
+
+    }
+
+  }
+
+}
+
+Possible errors:
+
+VALIDATION_ERROR
+
+INVALID_ACCOUNT_TYPE
+
+INVALID_CREDENTIALS
+
+Current User
+GET /auth/me
+
+Authentication: Required
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "user": {
+
+      "id": 15,
+
+      "email": "john@example.com",
+
+      "phone": "08012345678",
+
+      "role": "advertiser",
+
+      "name": "John Doe"
+
+    }
+
+  }
+
+}
+
+
+
+Possible errors:
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+
+USER_NOT_FOUND
+
+Refresh Token
+POST /auth/refresh
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "refresh_token": "REFRESH_TOKEN_HERE"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "access_token": "NEW_ACCESS_TOKEN_HERE"
+
+  }
+
+}
+
+
+
+
+
+Possible errors:
+
+VALIDATION_ERROR
+
+INVALID_REFRESH_TOKEN
+
+REFRESH_TOKEN_EXPIRED
+
+USER_NOT_FOUND
+
+
+Forgot Password
+POST /auth/forgot-password
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "account_type": "advertiser",
+
+  "email": "john@example.com"
+
+}
+
+For screen owners:
+
+{
+
+  "account_type": "screen_owner",
+
+  "email": "owner@example.com"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "If an account exists for this email, a password reset link has been sent."
+
+  }
+
+}
+
+Possible errors:
+
+VALIDATION_ERROR
+
+SERVER_ERROR
+
+Note:
+
+For security, this endpoint may return a success message even if no account exists for the submitted email.
+
+Reset Password
+POST /auth/reset-password
+
+Authentication: Not required
+
+Request:
+
+{
+
+  "account_type": "advertiser",
+
+  "token": "RESET_TOKEN_FROM_EMAIL_LINK",
+
+  "password": "NewPassword123",
+
+  "password_confirmation": "NewPassword123"
+
+}
+
+For screen owners, use account_type: "screen_owner".
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Password reset successfully. Please log in with your new password."
+
+  }
+
+}
+
+Possible errors:
+
+VALIDATION_ERROR
+
+INVALID_RESET_TOKEN
+
+USER_NOT_FOUND
+
+Logout
+POST /auth/logout
+
+Authentication: Required
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Logged out successfully."
+
+  }
+
+}
+
+
+Possible errors:
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+HTTP Status Codes
+200 - Request successful
+
+201 - Resource created
+
+400 - Bad request
+
+401 - Authentication required, invalid token, or invalid credentials
+
+403 - Authenticated user is not allowed
+
+404 - Resource not found
+
+409 - Duplicate or conflicting resource
+
+422 - Validation error
+
+500 - Server error
+
+Test Accounts
+Only staging or test credentials should be shared here.
+
+Advertiser Test Account
+
+Email:
+
+Password:
+
+
+Screen Owner Test Account
+
+Email:
+
+Password:
+
+
+
+Phase 2: Profile and App Bootstrap
+Phase 2 endpoints help the mobile app load the authenticated app shell after login.
+Get Profile
+GET /profile
+
+Authentication: Required
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "user": {
+
+      "id": 15,
+
+      "email": "john@example.com",
+
+      "phone": "08012345678",
+
+      "role": "advertiser",
+
+      "name": "John Doe",
+
+      "first_name": "john",
+
+      "last_name": "doe",
+
+      "country_id": 1,
+
+      "business_name": "john foods",
+
+      "business_reg_no": "1234567",
+
+      "industry": "food",
+
+      "fb_url": null,
+
+      "ig_url": null,
+
+      "tiktok_url": null
+
+    }
+
+  }
+
+}
+
+
+For screen owners, the user object includes screen-owner profile fields such as:
+
+{
+
+  "role": "screen_owner",
+
+  "company_name": "prime mall screens",
+
+  "business_reg_no": "1234567",
+
+  "industry": "retail",
+
+  "bank_name": "example bank",
+
+  "account_name": "prime mall screens",
+
+  "account_number": "0123456789",
+
+  "onboarding_tutorial_completed": false,
+
+  "onboarding_session_booked": false
+
+}
+
+
+Possible errors:
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+
+USER_NOT_FOUND
+Update Profile
+PATCH /profile
+
+Authentication: Required
+
+Advertiser request example:
+
+{
+
+  "first_name": "John",
+
+  "last_name": "Doe",
+
+  "phone": "08012345678",
+
+  "country_id": 1,
+
+  "business_name": "John Foods",
+
+  "business_reg_no": "1234567",
+
+  "industry": "Food and Beverage",
+
+  "fb_url": "https://facebook.com/johnfoods",
+
+  "ig_url": "https://instagram.com/johnfoods",
+
+  "tiktok_url": "https://tiktok.com/@johnfoods"
+
+}
+
+
+Screen owner request example:
+
+{
+
+  "company_name": "Prime Mall Screens",
+
+  "phone": "08012345678",
+
+  "business_reg_no": "1234567",
+
+  "industry": "Retail",
+
+  "bank_name": "Example Bank",
+
+  "account_name": "Prime Mall Screens",
+
+  "account_number": "0123456789",
+
+  "fb_url": "https://facebook.com/primemall",
+
+  "ig_url": "https://instagram.com/primemall",
+
+  "tiktok_url": "https://tiktok.com/@primemall"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "user": {}
+
+  }
+
+}
+
+
+Possible errors:
+
+VALIDATION_ERROR
+
+DUPLICATE_PROFILE_VALUE
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+
+USER_NOT_FOUND
+App Bootstrap
+GET /bootstrap
+
+Authentication: Required
+
+Purpose:
+
+Load the authenticated app shell after login or app restart.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "user": {},
+
+    "dashboard": {
+
+      "orders_count": 2,
+
+      "active_orders_count": 1,
+
+      "completed_orders_count": 1,
+
+      "cart_items_count": 0,
+
+      "wishlist_items_count": 3
+
+    },
+
+    "profile": {
+
+      "complete": true,
+
+      "incomplete": false
+
+    },
+
+    "features": {
+
+      "can_create_campaign": true,
+
+      "can_manage_screens": false,
+
+      "can_view_earnings": false,
+
+      "can_upload_media": true
+
+    },
+
+    "onboarding": {
+
+      "profile_complete": true
+
+    },
+
+    "notification_count": 0
+
+  }
+
+}
+
+
+For screen owners, dashboard contains:
+
+{
+
+  "screens_count": 4,
+
+  "online_screens_count": 3,
+
+  "approved_screens_count": 2,
+
+  "total_earnings": 25000,
+
+  "total_paid": 15000,
+
+  "pending_payout": 10000
+
+}
+
+
+
+
+
+Phase 3: Read-Only Business Data
+Phase 3 gives the app read-only list and detail screens for the first real user workflows.
+Advertiser Orders
+GET /advertiser/orders
+
+Authentication: Required
+
+Role: Advertiser only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=all
+
+status can be all, pending, scheduled, approved, cancelled, rejected, or completed.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "orders": [
+
+      {
+
+        "id": 1,
+
+        "order_number": "GS-000001",
+
+        "status": "approved",
+
+"status_display": "Active",
+
+        "amount_paid": 50000,
+
+        "transaction_ref": "REF123",
+
+        "created_at": "2026-07-25T10:00:00",
+
+        "updated_at": "2026-07-25T10:00:00",
+
+        "items_count": 2
+
+      }
+
+    ],
+
+    "pagination": {
+
+      "page": 1,
+
+      "per_page": 10,
+
+      "total": 1,
+
+      "pages": 1,
+
+      "has_next": false,
+
+      "has_prev": false
+
+    }
+
+  }
+
+}
+
+Advertiser Order Detail
+GET /advertiser/orders/{order_id}
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "order": {
+
+      "id": 1,
+
+      "order_number": "GS-000001",
+
+      "status": "approved",
+
+      "amount_paid": 50000,
+
+      "items": [
+
+        {
+
+          "id": 10,
+
+          "screen_id": 3,
+
+          "screen_title": "Prime Mall Entrance",
+
+          "duration": "weekly",
+
+          "media_type": "image",
+
+          "start_date": "2026-07-25",
+
+          "end_date": "2026-08-01",
+
+          "media_filename": "ad.png",
+
+"media_url": "https://www.trygetseen.com/static/images/cart_items/ad.png",
+
+          "price": 25000
+
+        }
+
+      ]
+
+    }
+
+  }
+
+}
+Screen Owner Screens
+GET /screen-owner/screens
+
+Authentication: Required
+
+Role: Screen owner only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=online
+
+review=approved
+
+status and review are optional filters.
+
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "screens": [
+
+      {
+
+        "id": 3,
+
+        "title": "Prime Mall Entrance",
+
+        "address": "Ikeja",
+
+        "state": "Lagos",
+
+        "country": "Nigeria",
+
+        "status": "online",
+
+        "review": "approved",
+
+        "auto_status": "online",
+
+        "category_id": 2,
+
+        "category": {
+
+          "id": 2,
+
+          "name": "Shopping Mall",
+
+          "description": "Retail and mall display locations"
+
+        },
+
+        "venue_type": "Shopping Mall",
+
+        "price": 15000,
+
+        "price_per_week": 75000,
+
+        "price_per_month": 270000,
+
+        "daily_price": 15000,
+
+        "weekly_price": 75000,
+
+        "monthly_price": 270000,
+
+        "daily_markup_price": 15000,
+
+        "weekly_markup_price": 75000,
+
+        "monthly_markup_price": 270000,
+
+        "vendor_price": 10000,
+
+        "vendor_price_per_week": 50000,
+
+        "vendor_price_per_month": 180000,
+
+        "pricing": {
+
+          "currency_symbol": "NGN",
+
+          "daily": 15000,
+
+          "weekly": 75000,
+
+          "monthly": 270000,
+
+          "base_daily": 10000,
+
+          "base_weekly": 50000,
+
+          "base_monthly": 180000
+
+        },
+
+        "images": [
+
+          {
+
+            "filename": "prime-mall.jpg",
+
+            "url": "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+          }
+
+        ],
+
+        "image_urls": [
+
+          "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+        ],
+
+        "primary_image_url": "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+
+Screen image fields:
+
+primary_image_url - easiest field for showing the main image
+
+images[].url       - full URL for each gallery image
+
+image_urls[]       - flat list of full image URLs
+
+images[].filename  - original stored filename, included for reference only
+
+
+Screen pricing fields:
+
+price / daily_price / pricing.daily                  - advertiser-facing daily markup price
+
+price_per_week / weekly_price / pricing.weekly       - advertiser-facing weekly markup price
+
+price_per_month / monthly_price / pricing.monthly    - advertiser-facing monthly markup price
+
+vendor_price / pricing.base_daily                    - screen-owner base daily price
+
+vendor_price_per_week / pricing.base_weekly          - screen-owner base weekly price
+
+vendor_price_per_month / pricing.base_monthly        - screen-owner base monthly price
+
+Screen Owner Screen Detail
+GET /screen-owner/screens/{screen_id}
+
+Authentication: Required
+
+Role: Screen owner only
+
+This endpoint only returns screens owned by the authenticated screen owner.
+Screen Owner Payouts
+GET /screen-owner/payouts
+
+Authentication: Required
+
+Role: Screen owner only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=pending
+
+status is optional and can be pending or paid.
+
+Screen Owner Earnings
+GET /screen-owner/earnings
+
+Authentication: Required
+
+Role: Screen owner only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "earnings": {
+
+      "total_earnings": 25000,
+
+      "total_paid": 15000,
+
+      "pending_payout": 10000
+
+    }
+
+  }
+
+}
+
+
+
+
+Phase 4: Low-Risk Actions
+Phase 4 introduces controlled write actions that are safe to integrate before checkout, campaign creation, or media uploads.
+Change Password
+POST /account/change-password
+
+Authentication: Required
+
+Role: Advertiser or screen owner
+
+Request:
+
+{
+
+  "current_password": "OldPassword123",
+
+  "password": "NewPassword123",
+
+  "password_confirmation": "NewPassword123"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Password changed successfully."
+
+  }
+
+}
+
+Notes:
+
+Other mobile sessions for the same user are revoked.
+The current mobile session remains active.
+
+
+Possible errors:
+
+VALIDATION_ERROR
+
+INVALID_CURRENT_PASSWORD
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+Advertiser Wishlist
+GET /advertiser/wishlist
+
+Authentication: Required
+
+Role: Advertiser only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "wishlist": [
+
+      {
+
+        "id": 1,
+
+        "screen_id": 3,
+
+        "created_at": "2026-07-25T10:00:00",
+
+        "screen": {}
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+Check Wishlist Status
+GET /advertiser/wishlist/{screen_id}
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "screen_id": 3,
+
+    "in_wishlist": true
+
+  }
+
+}
+
+Toggle Wishlist
+POST /advertiser/wishlist/{screen_id}/toggle
+
+Authentication: Required
+
+Role: Advertiser only
+
+This endpoint adds the screen to the advertiser's wishlist if it is not already there, or removes it if it already exists.
+
+Success response when added:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "action": "added",
+
+    "in_wishlist": true,
+
+    "screen_id": 3,
+
+    "wishlist_item": {}
+
+  }
+
+}
+
+Success response when removed:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "action": "removed",
+
+    "in_wishlist": false,
+
+    "screen_id": 3
+
+  }
+
+}
+
+
+
+
+Possible errors:
+
+NOT_FOUND
+
+FORBIDDEN
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+
+Update Screen Status
+PATCH /screen-owner/screens/{screen_id}/status
+
+Authentication: Required
+
+Role: Screen owner only
+
+Request:
+
+{
+
+  "status": "offline"
+
+}
+
+Allowed values:
+
+online
+
+offline
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Screen status updated to offline.",
+
+    "screen": {}
+
+  }
+
+}
+
+This endpoint only updates screens owned by the authenticated screen owner.
+
+Phase 5: Screen Discovery and Cart Planning
+Phase 5 lets advertisers browse approved online screens and build a cart before media upload and checkout.
+
+Cart items created from mobile use a pending media placeholder until media is attached in Phase 6.
+
+Available Screens
+GET /advertiser/screens
+
+Authentication: Required
+
+Role: Advertiser only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+country_id=1
+
+search=mall
+
+country_id and search are optional. If country_id is omitted, the advertiser's saved country is used when available.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "screens": [
+
+      {
+
+        "id": 3,
+
+        "title": "Prime Mall Entrance",
+
+        "description": "High traffic entrance screen",
+
+        "address": "Ikeja",
+
+        "state": "Lagos",
+
+        "country": "Nigeria",
+
+        "currency_symbol": "₦",
+
+        "status": "online",
+
+        "review": "approved",
+
+        "auto_status": "online",
+
+        "category_id": 2,
+
+        "category": {
+
+          "id": 2,
+
+          "name": "Shopping Mall",
+
+          "description": "Retail and mall display locations"
+
+        },
+
+        "venue_type": "Shopping Mall",
+
+        "price": 15000,
+
+        "price_per_week": 75000,
+
+        "price_per_month": 270000,
+
+        "daily_price": 15000,
+
+        "weekly_price": 75000,
+
+        "monthly_price": 270000,
+
+        "daily_markup_price": 15000,
+
+        "weekly_markup_price": 75000,
+
+        "monthly_markup_price": 270000,
+
+        "vendor_price": 10000,
+
+        "vendor_price_per_week": 50000,
+
+        "vendor_price_per_month": 180000,
+
+        "pricing": {
+
+          "currency_symbol": "NGN",
+
+          "daily": 15000,
+
+          "weekly": 75000,
+
+          "monthly": 270000,
+
+          "base_daily": 10000,
+
+          "base_weekly": 50000,
+
+          "base_monthly": 180000
+
+        },
+
+        "images": [
+
+          {
+
+            "filename": "prime-mall.jpg",
+
+            "url": "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+          }
+
+        ],
+
+        "image_urls": [
+
+          "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+        ],
+
+        "primary_image_url": "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg"
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+Use primary_image_url for the main screen image. Use images[].url or image_urls[] for galleries. The filenames are included only for reference.
+
+Advertiser-facing prices match the web app and use admin markup. price, daily_price, and pricing.daily are the daily display price. vendor_price and pricing.base_daily are the screen-owner base price.
+Available Screen Detail
+GET /advertiser/screens/{screen_id}
+
+Authentication: Required
+
+Role: Advertiser only
+
+Only approved online screens are returned.
+Get Cart
+GET /advertiser/cart
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "cart": {
+
+      "items": [
+
+        {
+
+          "id": 21,
+
+          "screen_id": 3,
+
+          "screen_title": "Prime Mall Entrance",
+
+          "duration": "weekly",
+
+          "duration_multiplier": 1,
+
+          "media_type": "pending",
+
+          "media_filename": null,
+
+          "has_media": false,
+
+          "start_date": "2026-07-25",
+
+          "end_date": "2026-08-01",
+
+          "price": 75000,
+
+          "screen": {
+
+            "id": 3,
+
+            "title": "Prime Mall Entrance",
+
+            "venue_type": "Shopping Mall",
+
+            "primary_image_url": "https://www.trygetseen.com/dashboard/static/images/prime-mall.jpg",
+
+            "price": 15000,
+
+            "price_per_week": 75000,
+
+            "price_per_month": 270000
+
+          }
+
+        }
+
+      ],
+
+      "subtotal": 75000,
+
+      "currency_symbol": "₦",
+
+      "item_count": 1
+
+    }
+
+  }
+
+}
+Add Cart Item
+POST /advertiser/cart
+
+Authentication: Required
+
+Role: Advertiser only
+
+Request:
+
+{
+
+  "screen_id": 3,
+
+  "duration": "weekly",
+
+  "duration_multiplier": 1,
+
+  "start_date": "2026-07-25",
+
+  "end_date": "2026-08-01"
+
+}
+
+Allowed duration values:
+
+daily
+
+weekly
+
+monthly
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Screen added to cart successfully.",
+
+    "item": {},
+
+    "cart": {}
+
+  }
+
+}
+
+Possible errors:
+
+VALIDATION_ERROR
+
+FORBIDDEN
+
+AUTHENTICATION_REQUIRED
+
+INVALID_TOKEN
+
+TOKEN_EXPIRED
+Update Cart Item
+PATCH /advertiser/cart/{item_id}
+
+Authentication: Required
+
+Role: Advertiser only
+
+Request:
+
+{
+
+  "duration": "monthly",
+
+  "duration_multiplier": 1,
+
+  "start_date": "2026-07-25",
+
+  "end_date": "2026-08-24"
+
+}
+Remove Cart Item
+DELETE /advertiser/cart/{item_id}
+
+Authentication: Required
+
+Role: Advertiser only
+
+This removes only cart items owned by the authenticated advertiser.
+Clear Cart
+DELETE /advertiser/cart
+
+Authentication: Required
+
+Role: Advertiser only
+
+This removes all cart items owned by the authenticated advertiser.
+
+Phase 6: Cart Media
+Phase 6 lets advertisers upload or select media for cart items.
+Previous Media
+GET /advertiser/media
+
+Authentication: Required
+
+Role: Advertiser only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "media": [
+
+      {
+
+        "filename": "abc123.png",
+
+        "name": "abc123.png",
+
+        "media_type": "image",
+
+        "source": "uploaded",
+
+        "url": "https://www.trygetseen.com/static/images/cart_items/abc123.png"
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+Media sources:
+
+uploaded - media uploaded by the advertiser
+
+order    - media used in approved or completed orders
+
+Upload Cart Media
+POST /advertiser/cart/{item_id}/media
+
+Authentication: Required
+
+Role: Advertiser only
+
+Content type:
+
+multipart/form-data
+
+Multipart fields for a new upload:
+
+media_type=image
+
+media=<file>
+
+Allowed media types:
+
+image - JPG, JPEG, PNG
+
+video - MP4
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Media uploaded successfully.",
+
+    "item": {},
+
+    "media": {
+
+      "filename": "abc123.png",
+
+      "media_type": "image",
+
+      "source": "uploaded",
+
+      "url": "https://www.trygetseen.com/static/images/cart_items/abc123.png"
+
+    },
+
+    "cart": {}
+
+  }
+
+}
+
+Select Existing Media
+Use the same endpoint:
+
+POST /advertiser/cart/{item_id}/media
+
+Content type:
+
+multipart/form-data
+
+Multipart fields:
+
+media_type=image
+
+existing_media=abc123.png
+
+This attaches an existing uploaded/order media file to the cart item.
+
+Phase 7: Checkout And Payment
+Phase 7 lets advertisers turn a ready cart into a Paystack payment.
+
+Checkout is only for digital screen bookings in this phase. Amplify/retargeting checkout is not included yet.
+
+Before checkout:
+
+The advertiser must have at least one cart item.
+
+Every cart item must have uploaded or selected media.
+
+Every selected screen must still be online and approved.
+
+Validate Cart Coupon
+POST /advertiser/cart/validate-coupon
+
+Authentication: Required
+
+Role: Advertiser only
+
+Request:
+
+{
+
+  "coupon": "SUMMER2026"
+
+}
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Coupon applied successfully.",
+
+    "coupon": {
+
+      "code": "summer2026",
+
+      "discount_type": "percentage",
+
+      "discount_value": 10
+
+    },
+
+    "subtotal": 75000,
+
+    "discount": 7500,
+
+    "total": 67500
+
+  }
+
+}
+
+Possible errors:
+
+INVALID_COUPON
+
+CHECKOUT_NOT_READY
+
+VALIDATION_ERROR
+
+Checkout Summary
+GET /advertiser/cart/checkout-summary?coupon=SUMMER2026
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "checkout": {
+
+      "items": [],
+
+      "item_count": 1,
+
+      "currency_symbol": "NGN",
+
+      "subtotal": 75000,
+
+      "discount": 7500,
+
+      "total": 67500,
+
+      "coupon": {
+
+        "code": "summer2026",
+
+        "discount_type": "percentage",
+
+        "discount_value": 10
+
+      },
+
+      "coupon_error": null
+
+    },
+
+    "ready": true,
+
+    "blocking_errors": []
+
+  }
+
+}
+
+If checkout is not ready:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "checkout": {},
+
+    "ready": false,
+
+    "blocking_errors": [
+
+      {
+
+        "code": "MEDIA_REQUIRED",
+
+        "cart_item_id": 21,
+
+        "screen_id": 3,
+
+        "message": "Upload or select media for Prime Mall Entrance before checkout."
+
+      }
+
+    ]
+
+  }
+
+}
+Initialize Checkout Payment
+POST /advertiser/cart/checkout
+
+Authentication: Required
+
+Role: Advertiser only
+
+Request:
+
+{
+
+  "coupon": "SUMMER2026",
+
+  "order_note": "Please review the creative before scheduling."
+
+}
+
+coupon and order_note are optional.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Payment initialized successfully.",
+
+    "payment": {
+
+      "reference": "GS-ABC123",
+
+      "amount": 67500,
+
+      "status": "pending",
+
+      "processed": false,
+
+      "has_screen_booking": true,
+
+      "has_geofence_campaign": false,
+
+      "coupon_discount": 7500,
+
+      "orders": []
+
+    },
+
+    "checkout": {},
+
+    "paystack": {
+
+      "authorization_url": "https://checkout.paystack.com/...",
+
+      "access_code": "ACCESS_CODE",
+
+      "reference": "GS-ABC123",
+
+      "public_key_required_on_mobile": false
+
+    }
+
+  }
+
+}
+
+The mobile app should open paystack.authorization_url in Paystack checkout. After payment, call the verify endpoint below with the returned reference.
+
+Possible errors:
+
+CHECKOUT_NOT_READY
+
+INVALID_COUPON
+
+INVALID_CHECKOUT_TOTAL
+
+PAYMENT_INITIALIZATION_FAILED
+
+Payment Status
+GET /advertiser/payments/{reference}
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "payment": {
+
+      "reference": "GS-ABC123",
+
+      "amount": 67500,
+
+      "status": "success",
+
+      "processed": true,
+
+      "has_screen_booking": true,
+
+      "has_geofence_campaign": false,
+
+      "coupon_discount": 7500,
+
+      "orders": []
+
+    }
+
+  }
+
+}
+
+Verify Payment
+POST /advertiser/payments/{reference}/verify
+
+Authentication: Required
+
+Role: Advertiser only
+
+This verifies the transaction with Paystack. If Paystack reports success, the backend reuses the existing successful-payment processing flow to create orders and clear the paid cart.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Payment verified successfully.",
+
+    "payment": {
+
+      "reference": "GS-ABC123",
+
+      "status": "success",
+
+      "processed": true,
+
+      "orders": []
+
+    }
+
+  }
+
+}
+
+
+Possible errors:
+
+PAYMENT_VERIFICATION_FAILED
+
+PAYMENT_NOT_SUCCESSFUL
+
+NOT_FOUND
+
+Phase 8: Screen Owner Bookings
+Phase 8 lets screen owners view bookings for their screens after advertiser payments create orders.
+
+This phase is read-only for screen owners. Admins still control approval, scheduling, rejection, cancellation, and completion from the web dashboard.
+
+Screen Owner Bookings
+GET /screen-owner/bookings
+
+Authentication: Required
+
+Role: Screen owner only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=active
+
+search=mall
+
+start_date=2026-07-01
+
+end_date=2026-07-31
+
+status is optional. Supported values:
+
+scheduled
+
+active
+
+approved
+
+completed
+
+active maps to approved orders, matching the screen-owner web dashboard.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "bookings": [
+
+      {
+
+        "id": 10,
+
+        "order_item_id": 10,
+
+        "order_id": 1,
+
+        "order_number": "GS-000001",
+
+        "screen_id": 3,
+
+        "venue": "Prime Mall Entrance",
+
+        "location": "Lagos, Nigeria",
+
+        "advertiser": {
+
+          "id": 12,
+
+          "name": "Jane Doe",
+
+          "email": "jane@example.com",
+
+          "phone": "08012345678",
+
+          "business_name": "Jane Stores"
+
+        },
+
+        "start_date": "2026-07-25",
+
+        "end_date": "2026-08-01",
+
+        "display_start_date": "Jul 25, 2026",
+
+        "display_end_date": "Aug 01, 2026",
+
+        "duration": "weekly",
+
+        "media_type": "image",
+
+        "media_filename": "ad.png",
+
+        "media_url": "https://www.trygetseen.com/static/images/cart_items/ad.png",
+
+        "status": "approved",
+
+        "status_display": "Active",
+
+        "amount_paid": 50000,
+
+        "currency_symbol": "NGN"
+
+      }
+
+    ],
+
+    "pagination": {
+
+      "page": 1,
+
+      "per_page": 10,
+
+      "total": 1,
+
+      "pages": 1,
+
+      "has_next": false,
+
+      "has_prev": false
+
+    }
+
+  }
+
+}
+
+amount_paid is calculated from the screen-owner base screen prices, not admin markup. This mirrors the screen-owner web dashboard.
+
+Screen Owner Booking Detail
+GET /screen-owner/bookings/{booking_id}
+
+Authentication: Required
+
+Role: Screen owner only
+
+Use order_item_id from the bookings list as booking_id.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "booking": {
+
+      "id": 10,
+
+      "order_item_id": 10,
+
+      "order_id": 1,
+
+      "order_number": "GS-000001",
+
+      "screen": {},
+
+      "advertiser": {},
+
+      "media_url": "https://www.trygetseen.com/static/images/cart_items/ad.png",
+
+      "amount_paid": 50000,
+
+      "advertiser_paid_price": 75000,
+
+      "status": "approved",
+
+      "status_display": "Active"
+
+    }
+
+  }
+
+}
+
+
+Possible errors:
+
+NOT_FOUND
+
+VALIDATION_ERROR
+
+Phase 9: Reviews And Ratings
+Phase 9 lets advertisers review completed screen bookings and lets both advertisers and screen owners view review data.
+
+Review submission mirrors the web flow:
+
+Only completed orders can be reviewed.
+
+Submitted or updated reviews go to pending status for admin moderation.
+
+Approved reviews are the only reviews shown on public/advertiser-facing screen review lists.
+
+Advertiser Reviews
+GET /advertiser/reviews
+
+Authentication: Required
+
+Role: Advertiser only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=all
+
+status can be all, pending, approved, or rejected.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "reviews": [
+
+      {
+
+        "id": 44,
+
+        "advertiser_id": 12,
+
+        "screen_id": 3,
+
+        "order_id": 1,
+
+        "rating": 5,
+
+        "review_text": "Great placement and smooth campaign.",
+
+        "status": "pending",
+
+        "screen": {},
+
+        "order": {}
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+Order Review Status
+GET /advertiser/orders/{order_id}/review
+
+Authentication: Required
+
+Role: Advertiser only
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "order": {
+
+      "id": 1,
+
+      "order_number": "GS-000001",
+
+      "status": "completed",
+
+      "status_display": "Completed"
+
+    },
+
+    "review": {
+
+      "can_review": true,
+
+      "has_review": false,
+
+      "reviews": []
+
+    }
+
+  }
+
+}
+
+Submit Or Update Order Review
+POST /advertiser/orders/{order_id}/review
+
+Authentication: Required
+
+Role: Advertiser only
+
+Request:
+
+{
+
+  "rating": 5,
+
+  "review_text": "Great placement and smooth campaign."
+
+}
+
+rating is required and must be between 1 and 5. review_text is optional.
+
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "message": "Review submitted successfully.",
+
+    "review": {
+
+      "can_review": true,
+
+      "has_review": true,
+
+      "reviews": [
+
+        {
+
+          "id": 44,
+
+          "screen_id": 3,
+
+          "order_id": 1,
+
+          "rating": 5,
+
+          "review_text": "Great placement and smooth campaign.",
+
+          "status": "pending",
+
+          "screen": {}
+
+        }
+
+      ]
+
+    }
+
+  }
+
+}
+
+Possible errors:
+
+ORDER_NOT_COMPLETED
+
+VALIDATION_ERROR
+
+NOT_FOUND
+Screen Reviews
+GET /advertiser/screens/{screen_id}/reviews
+
+Authentication: Required
+
+Role: Advertiser only
+
+Only approved reviews are returned.
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "screen": {},
+
+    "rating": {
+
+      "average": 4.8,
+
+      "count": 12
+
+    },
+
+    "reviews": [
+
+      {
+
+        "id": 44,
+
+        "rating": 5,
+
+        "review_text": "Great placement and smooth campaign.",
+
+        "status": "approved",
+
+        "advertiser": {
+
+          "id": 12,
+
+          "name": "Jane Doe",
+
+          "business_name": "Jane Stores"
+
+        }
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+
+Screen Owner Reviews
+GET /screen-owner/reviews
+
+Authentication: Required
+
+Role: Screen owner only
+
+Query parameters:
+
+page=1
+
+per_page=10
+
+status=all
+
+rating=all
+
+search=mall
+
+Success response:
+
+{
+
+  "success": true,
+
+  "data": {
+
+    "reviews": [
+
+      {
+
+        "id": 44,
+
+        "rating": 5,
+
+        "review_text": "Great placement and smooth campaign.",
+
+        "status": "approved",
+
+        "screen": {},
+
+        "order": {},
+
+        "advertiser": {}
+
+      }
+
+    ],
+
+    "pagination": {}
+
+  }
+
+}
+lets wire up bookings for screen owners
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-08-04T11:28:16+01:00.
+
+The user's current state is as follows:
+Active Document: /Users/sedisamuel/Downloads/walletnest/lib/core/data/app_repository.dart (LANGUAGE_DART)
+Cursor is on line: 17
+Other open documents:
+- /Users/sedisamuel/Downloads/walletnest/lib/core/domain/app_view_model.dart (LANGUAGE_DART)
+- /Users/sedisamuel/Downloads/walletnest/lib/main/staging.env (LANGUAGE_UNSPECIFIED)
+- /Users/sedisamuel/Downloads/walletnest/lib/main/main_prod.dart (LANGUAGE_DART)
+- /Users/sedisamuel/Downloads/walletnest/lib/main.dart (LANGUAGE_DART)
+- /Users/sedisamuel/Downloads/walletnest/lib/core/presentation/theming/app_colors.dart (LANGUAGE_DART)
+</ADDITIONAL_METADATA>

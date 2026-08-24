@@ -8,7 +8,8 @@ import {
     useWindowDimensions,
     useColorScheme,
     ActivityIndicator,
-    RefreshControl
+    RefreshControl,
+    Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/authStore';
@@ -41,6 +42,11 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Instantly dump local state if user logs out (role becomes null)
+    React.useEffect(() => {
+        if (!role) setProfile(null);
+    }, [role]);
+
     useFocusEffect(
         useCallback(() => {
             const loadProfile = async () => {
@@ -70,9 +76,24 @@ export default function ProfileScreen() {
         }
     };
 
-    const displayName = profile ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : 'Loading...';
-    const companyName = profile?.companyName || 'Not Set';
-    const avatarUrl = profile?.avatarUrl || "https://ui-avatars.com/api/?name=" + (profile?.firstName || 'User') + "&background=random";
+    const handleWhatsApp = () => {
+        Linking.openURL('https://wa.me/2347076267899').catch(err => console.error('An error occurred', err));
+    };
+
+    const handleEmail = () => {
+        Linking.openURL('mailto:info@trygetseen.com');
+    };
+
+    const displayName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Loading...';
+    const companyName = profile?.business_name || 'Not Set';
+    
+    const getInitials = (first?: string, last?: string, biz?: string) => {
+        if (first && last) return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
+        if (first) return first.substring(0, 2).toUpperCase();
+        if (biz) return biz.substring(0, 2).toUpperCase();
+        return 'US';
+    };
+    const avatarUrl = profile?.avatarUrl || `https://ui-avatars.com/api/?name=${getInitials(profile?.first_name, profile?.last_name, profile?.business_name)}&background=random&length=2`;
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -86,12 +107,8 @@ export default function ProfileScreen() {
                 }
             >
                 {/* Hero Section */}
-                {loading ? (
-                    <ActivityIndicator size="large" color={activeTint} style={{ marginTop: 20 }} />
-                ) : (
-                    <>
-                        <ProfileHero
-                            name={displayName}
+                <ProfileHero
+                    name={displayName}
                             company={companyName}
                             imageUrl={avatarUrl}
                             tintColor={activeTint}
@@ -135,17 +152,59 @@ export default function ProfileScreen() {
                                         value="Fully Verified"
                                         icon={<Ionicons name="checkmark-circle" size={18} color="#1E7E34" />}
                                     />
-                                    <ProfileInfoTile label="Tax ID" value={profile?.taxId || 'Not set'} />
+                                    <ProfileInfoTile label="Reg No." value={profile?.business_reg_no || 'Not set'} />
                                 </View>
                                 <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
                                 <View style={styles.infoRow}>
-                                    <ProfileInfoTile label="Category" value={profile?.category || 'Not set'} />
-                                    <ProfileInfoTile label="Location" value={profile?.city ? `${profile.city}, ${profile.country || ''}` : 'Not set'} />
+                                    <ProfileInfoTile label="Industry" value={profile?.industry || 'Not set'} />
+                                    <ProfileInfoTile label="Country ID" value={profile?.country_id ? `${profile.country_id}` : 'Not set'} />
+                                </View>
+                            </View>
+
+                            {/* CONTACT INFORMATION */}
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 24, marginBottom: 16 }]}>Contact Information</Text>
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Email" value={profile?.email || 'Not set'} />
+                                    <ProfileInfoTile label="Phone" value={profile?.phone || 'Not set'} />
+                                </View>
+                            </View>
+
+                            {/* SOCIAL MEDIA */}
+                            <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 24, marginBottom: 16 }]}>Social Media</Text>
+                            <View style={[
+                                styles.infoCard,
+                                { backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#F9FAFB' }
+                            ]}>
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="Instagram" value={profile?.ig_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-instagram" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="Facebook" value={profile?.fb_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-facebook" size={18} color={theme.tint} />} />
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: theme.textSecondary + '15' }]} />
+                                <View style={styles.infoRow}>
+                                    <ProfileInfoTile label="TikTok" value={profile?.tiktok_url ? 'Linked' : 'Not set'} icon={<Ionicons name="logo-tiktok" size={18} color={theme.tint} />} />
+                                    <ProfileInfoTile label="" value="" />
                                 </View>
                             </View>
                         </View>
-                    </>
-                )}
+
+                {/* ACTIVITY SECTION */}
+                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
+                    <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
+                        Activity
+                    </Text>
+
+                    <SupportButton
+                        label="My Reviews"
+                        icon={<Ionicons name="star-outline" size={isTablet ? 24 : 20} color={activeTint} />}
+                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
+                        tintColor={activeTint}
+                        onPress={() => router.push('/homeSubScreens/myReviews')}
+                    />
+                </View>
 
                 {/* SUPPORT & FEEDBACK SECTION */}
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
@@ -155,20 +214,21 @@ export default function ProfileScreen() {
 
                     <SupportButton
                         label="Contact Support"
-                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={activeTint} />}
+                        icon={<Ionicons name="logo-whatsapp" size={isTablet ? 24 : 20} color={activeTint} />}
                         bgColor={colorScheme === 'dark' ? '#2A181C' : '#FEE2E9'}
                         tintColor={activeTint}
-                        onPress={() => router.push("/profile-subscreens/support")}
+                        onPress={handleWhatsApp}
                     />
 
                     <SupportButton
-                        label="Give Feedback"
-                        icon={<Ionicons name="chatbubble-outline" size={isTablet ? 24 : 20} color={activeTint} />}
+                        label="Report a Bug"
+                        icon={<Ionicons name="mail-outline" size={isTablet ? 24 : 20} color={activeTint} />}
                         bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
                         tintColor={activeTint}
-                        onPress={() => router.push("/profile-subscreens/feedback")}
+                        onPress={handleEmail}
                     />
                 </View>
+
 
                 {/* LOGOUT BUTTON */}
                 <TouchableOpacity

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
     StyleSheet,
     View,
@@ -15,6 +15,8 @@ import { Colors } from '@/constants/theme';
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
+import cartService from '@/api/cartService';
 
 type Theme = typeof Colors.light;
 
@@ -32,6 +34,24 @@ export default function HomeHeader({ searchQuery, setSearchQuery }: HomeHeaderPr
     const router = useRouter();
 
     const cartCount = useCartStore((state) => state.items?.length || 0);
+    const setCartData = useCartStore((state) => state.setCartData);
+    const wishlistCount = useWishlistStore((state) => state.wishlist?.length || 0);
+
+    // Initialize cart count in the background
+    useEffect(() => {
+        const initCart = async () => {
+            try {
+                const cart = await cartService.getCart();
+                setCartData(cart.items, cart.subtotal, cart.totalAmount);
+            } catch (error) {
+                // Silently fail if cart is empty or network error
+            }
+        };
+        // Fetch cart if it hasn't been loaded into memory yet
+        if (cartCount === 0) {
+            initCart();
+        }
+    }, []);
 
     // 2. Get the exact height of the device's status bar/notch
     const insets = useSafeAreaInsets();
@@ -70,6 +90,11 @@ export default function HomeHeader({ searchQuery, setSearchQuery }: HomeHeaderPr
 
                 {/* RIGHT: Actions */}
                 <View style={styles.rightActions}>
+                    {/* Help/Tutorial Circle (Inactive) */}
+                    <TouchableOpacity style={[styles.iconCircle, styles.cartMargin]} activeOpacity={1}>
+                        <Ionicons name="help-circle-outline" size={isTablet ? 22 : 18} color="white" />
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={[styles.iconCircle, styles.cartMargin]} onPress={handleNavigationToCart} >
                         <Ionicons name="cart-outline" size={isTablet ? 20 : 16} color="white" />
                         {cartCount > 0 && (
@@ -79,13 +104,18 @@ export default function HomeHeader({ searchQuery, setSearchQuery }: HomeHeaderPr
                         )}
                     </TouchableOpacity>
 
-                    {/* Heart Circle - Centered */}
-                    <TouchableOpacity style={styles.profileCircle} onPress={handleNavigationToWishlist}>
+                    {/* Heart Circle */}
+                    <TouchableOpacity style={[styles.profileCircle, { position: 'relative' }]} onPress={handleNavigationToWishlist}>
                         <Ionicons
-                            name="heart-outline"
+                            name={wishlistCount > 0 ? "heart" : "heart-outline"}
                             size={isTablet ? 22 : 20}
-                            color={theme.brandNavy}
+                            color={wishlistCount > 0 ? '#FF2D55' : theme.brandNavy}
                         />
+                        {wishlistCount > 0 && (
+                            <View style={[styles.badge, { borderColor: 'white' }]}>
+                                <Text style={styles.badgeText}>{wishlistCount}</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
 

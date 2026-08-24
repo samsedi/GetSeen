@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 
 import { useAppTheme } from '@/constants/theme';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
-import AuthInputField from '@/components/AuthComponents/AuthInputField';
+import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
 
 import { useForgotPassword } from '@/hooks/useForgotPassword';
 
@@ -18,7 +18,7 @@ export default function ForgotPasswordScreenOwner() {
     const {
         email, error, loading, isButtonDisabled,
         handleEmailChange, handleSendResetLink, goBack,
-    } = useForgotPassword();
+    } = useForgotPassword('screen_owner');
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
@@ -28,8 +28,8 @@ export default function ForgotPasswordScreenOwner() {
 
     // Screen owner uses navy blue instead of pink
     const brandBlue = theme.brandNavy;
-    const errorRed = '#FF3B30';
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
+    const errorRed = theme.statusRed;
+    const inputBg = theme.inputBg;
 
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')
@@ -56,7 +56,7 @@ export default function ForgotPasswordScreenOwner() {
                 <AuthPromoCard
                     title="Reset Password"
                     subtitle="Enter the email address linked to your venue account and we'll send you a secure reset link."
-                    bgColor="#D11243"
+                    bgColor={theme.brandRed}
                     iconName="lock-closed-outline"
                 />
 

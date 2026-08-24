@@ -34,15 +34,11 @@ const PackageCard = memo(function PackageCard({
                                                    isSelected,
                                                    onSelect,
                                                    theme,
-                                                   isLandscape,
-                                                   isTablet,
                                                }: {
     pkg: GeneratedPackage;
     isSelected: boolean;
     onSelect: (id: string) => void;
     theme: any;
-    isLandscape: boolean;
-    isTablet: boolean;
 }) {
     const handlePress = useCallback(() => onSelect(pkg.id), [onSelect, pkg.id]);
 
@@ -51,66 +47,20 @@ const PackageCard = memo(function PackageCard({
             activeOpacity={0.9}
             onPress={handlePress}
             style={[
-                styles.packageCard,
+                styles.durationCard,
                 {
-                    backgroundColor: theme.background,
+                    backgroundColor: isSelected ? '#FF2D5510' : theme.card,
                     borderColor: isSelected ? '#FF2D55' : theme.border,
                     borderWidth: isSelected ? 2 : 1,
-                    // Landscape: tighter vertical padding to fit more on screen
-                    padding: isLandscape ? 10 : 16,
-                    marginBottom: isLandscape ? 8 : 12,
                 },
             ]}
         >
-            <View style={styles.pkgHeader}>
-                <Text
-                    style={[
-                        styles.pkgName,
-                        {
-                            color: theme.text,
-                            fontSize: isTablet ? 16 : isLandscape ? 13 : 15,
-                        },
-                    ]}
-                >
-                    {pkg.emoji} {pkg.name}
-                </Text>
-                <Text
-                    style={[
-                        styles.pkgPrice,
-                        { fontSize: isTablet ? 20 : isLandscape ? 15 : 18 },
-                    ]}
-                >
-                    ₦{pkg.basePrice.toLocaleString('en-NG')}
-                    <Text style={styles.perDay}>/day</Text>
-                </Text>
-            </View>
-
-            {/* Landscape: show features in a horizontal wrap to save vertical space */}
-            <View style={isLandscape ? styles.featuresWrap : undefined}>
-                {pkg.features?.map((feat, i) => (
-                    <View
-                        key={i}
-                        style={[
-                            styles.featureRow,
-                            isLandscape && styles.featureRowLandscape,
-                            { marginBottom: isLandscape ? 2 : 5 },
-                        ]}
-                    >
-                        <Ionicons name="checkmark-circle" size={isLandscape ? 12 : 14} color="#4CAF50" />
-                        <Text
-                            style={[
-                                styles.featureText,
-                                {
-                                    color: theme.textSecondary,
-                                    fontSize: isLandscape ? 11 : 13,
-                                },
-                            ]}
-                        >
-                            {feat}
-                        </Text>
-                    </View>
-                ))}
-            </View>
+            <Text style={[styles.durationCardLabel, { color: isSelected ? '#FF2D55' : theme.text }]}>
+                {pkg.emoji} {pkg.name}
+            </Text>
+            <Text style={[styles.durationCardSub, { color: isSelected ? '#FF2D55' : theme.textSecondary }]}>
+                ₦{pkg.basePrice.toLocaleString('en-NG')}
+            </Text>
         </TouchableOpacity>
     );
 });
@@ -158,11 +108,9 @@ export default memo(function PackageSelectionModal({
                 isSelected={selectedId === pkg.id}
                 onSelect={setSelectedId}
                 theme={theme}
-                isLandscape={isLandscape}
-                isTablet={isTablet}
             />
         ),
-        [selectedId, theme, isLandscape, isTablet],
+        [selectedId, theme],
     );
 
     if (!item) return null;
@@ -187,38 +135,21 @@ export default memo(function PackageSelectionModal({
             onRequestClose={onClose}
             supportedOrientations={['portrait', 'landscape']}
         >
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-
+            <View style={styles.overlay}>
+                {/* Touch outside to close */}
+                <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+                
                 <View
                     style={[
-                        styles.sheetWrapper,
-                        isLandscape || isTablet
-                            ? styles.sheetWrapperCentered
-                            : styles.sheetWrapperBottom,
+                        styles.modalContent,
+                        { backgroundColor: theme.background }
                     ]}
+                    onStartShouldSetResponder={() => true}
                 >
-                    <View
-                        style={[
-                            styles.sheet,
-                            {
-                                backgroundColor: theme.card,
-                                borderColor: theme.border,
-                                maxHeight: sheetMaxHeight,
-                                width: sheetWidth,
-                                padding: sheetPadding,
-                                paddingBottom: sheetPaddingBottom,
-                                borderRadius: isTablet || isLandscape ? 28 : undefined,
-                                borderTopLeftRadius: isTablet || isLandscape ? 28 : 35,
-                                borderTopRightRadius: isTablet || isLandscape ? 28 : 35,
-                            },
-                        ]}
-                        onStartShouldSetResponder={() => true}
-                    >
-                        <View style={styles.dragHandle} />
+                    <View style={styles.handle} />
 
-                        {/* ── Header ──────────────────────────────────────── */}
-                        <View style={[styles.header, { marginBottom: headerMarginBottom }]}>
+                    {/* ── Header ──────────────────────────────────────── */}
+                    <View style={[styles.header, { marginBottom: headerMarginBottom }]}>
                             <View style={{ flex: 1 }}>
                                 <Text style={[styles.title, { color: theme.text, fontSize: titleFontSize }]}>
                                     Select Package
@@ -230,10 +161,10 @@ export default memo(function PackageSelectionModal({
                                     {item.name}
                                 </Text>
                             </View>
-                            <TouchableOpacity onPress={onClose} hitSlop={10}>
+                            <TouchableOpacity onPress={onClose} hitSlop={10} style={styles.closeBtn}>
                                 <Ionicons
-                                    name="close-circle"
-                                    size={isTablet ? 38 : isLandscape ? 28 : 32}
+                                    name="close"
+                                    size={24}
                                     color={theme.textSecondary}
                                 />
                             </TouchableOpacity>
@@ -245,130 +176,75 @@ export default memo(function PackageSelectionModal({
                             keyboardShouldPersistTaps="handled"
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {isLandscape ? (
-                                <View style={styles.landscapeGrid}>
-                                    {derivedPackages.map((pkg) => (
-                                        <View key={pkg.id} style={styles.landscapeCardWrapper}>
-                                            <PackageCard
-                                                pkg={pkg}
-                                                isSelected={selectedId === pkg.id}
-                                                onSelect={setSelectedId}
-                                                theme={theme}
-                                                isLandscape={isLandscape}
-                                                isTablet={isTablet}
-                                            />
-                                        </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <FlatList
-                                    data={derivedPackages}
-                                    keyExtractor={keyExtractor}
-                                    renderItem={renderItem}
-                                    showsVerticalScrollIndicator={false}
-                                    contentContainerStyle={styles.listPadding}
-                                    scrollEnabled={false}
-                                    windowSize={3}
-                                    maxToRenderPerBatch={5}
-                                    initialNumToRender={5}
-                                />
+                            {/* ─── Ad Duration ─── */}
+                            <Text style={[styles.sectionLabel, { color: theme.text }]}>Ad Duration</Text>
+                            <View style={styles.durationRow}>
+                                {derivedPackages.map((pkg) => (
+                                    <PackageCard
+                                        key={pkg.id}
+                                        pkg={pkg}
+                                        isSelected={selectedId === pkg.id}
+                                        onSelect={setSelectedId}
+                                        theme={theme}
+                                    />
+                                ))}
+                            </View>
+                            {selectedPkg && (
+                                <Text style={[styles.durationHint, { color: theme.textSecondary }]}>
+                                    {selectedPkg.features?.[0] || 'Select an ad duration to continue.'}
+                                </Text>
                             )}
 
-                            <View
-                                style={[
-                                    styles.datesCard,
-                                    {
-                                        backgroundColor: theme.background,
-                                        borderColor: theme.border,
-                                        padding: isLandscape ? 12 : 16,
-                                        marginBottom: isLandscape ? 8 : 12,
-                                    },
-                                ]}
-                            >
-                                <Text style={[styles.datesTitle, { color: theme.text, fontSize: sectionFontSize }]}>
-                                    📅 Campaign Dates
+                            {/* ─── Extend Duration ─── */}
+                            <Text style={[styles.sectionLabel, { color: theme.text, marginTop: 24 }]}>Extend Duration</Text>
+                            <View style={styles.multiplierRow}>
+                                <TouchableOpacity
+                                    style={[styles.multiplierBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                                    onPress={decrementQuantity}
+                                    disabled={quantity <= 1}
+                                >
+                                    <Ionicons name="remove" size={20} color={quantity <= 1 ? theme.textSecondary + '40' : '#FF2D55'} />
+                                </TouchableOpacity>
+                                <View style={[styles.multiplierDisplay, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                                    <Text style={[styles.multiplierValue, { color: theme.text }]}>{quantity}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={[styles.multiplierBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                                    onPress={incrementQuantity}
+                                    disabled={quantity >= 12}
+                                >
+                                    <Ionicons name="add" size={20} color={quantity >= 12 ? theme.textSecondary + '40' : '#FF2D55'} />
+                                </TouchableOpacity>
+                            </View>
+                            {selectedPkg && (
+                                <Text style={[styles.durationHint, { color: theme.textSecondary, marginTop: 8 }]}>
+                                    Your campaign will run for {quantity} {quantity === 1 ? (selectedPkg.id === 'daily' ? 'Day' : selectedPkg.id === 'weekly' ? 'Week' : 'Month') : (selectedPkg.id === 'daily' ? 'Days' : selectedPkg.id === 'weekly' ? 'Weeks' : 'Months')} ({selectedPkg.name} x{quantity})
                                 </Text>
+                            )}
 
-                                <View style={styles.datesRow}>
-                                    {/* Start date — tappable */}
-                                    <View style={styles.dateBlock}>
-                                        <Text style={[styles.dateLabel, { color: theme.textSecondary, fontSize: dateLabelSize }]}>
-                                            Start Date
+                            {/* ─── Date Pickers ─── */}
+                            <View style={styles.dateSection}>
+                                <View style={styles.dateColumn}>
+                                    <Text style={[styles.sectionLabel, { color: theme.text }]}>Campaign Start Date</Text>
+                                    <TouchableOpacity
+                                        style={[styles.dateInput, { backgroundColor: theme.card, borderColor: theme.border }]}
+                                        onPress={() => setShowPicker(true)}
+                                    >
+                                        <Text style={[styles.dateInputText, { color: theme.text }]}>
+                                            {formatDate(startDate)}
                                         </Text>
-                                        <TouchableOpacity
-                                            activeOpacity={0.8}
-                                            onPress={() => setShowPicker(true)}
-                                            style={[
-                                                styles.dateField,
-                                                {
-                                                    borderColor: '#FF2D55',
-                                                    paddingVertical: isLandscape ? 7 : 10,
-                                                },
-                                            ]}
-                                        >
-                                            <Text style={[styles.dateValue, { color: theme.text, fontSize: dateFontSize }]}>
-                                                {formatDate(startDate)}
-                                            </Text>
-                                            <Ionicons name="calendar-outline" size={isLandscape ? 14 : 16} color="#FF2D55" />
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <Ionicons
-                                        name="arrow-forward"
-                                        size={isLandscape ? 14 : 18}
-                                        color={theme.textSecondary}
-                                        style={styles.arrowIcon}
-                                    />
-
-                                    {/* End date — read-only */}
-                                    <View style={styles.dateBlock}>
-                                        <Text style={[styles.dateLabel, { color: theme.textSecondary, fontSize: dateLabelSize }]}>
-                                            End Date
+                                        <Ionicons name="calendar" size={18} color="#FF2D55" />
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={styles.dateColumn}>
+                                    <Text style={[styles.sectionLabel, { color: theme.text }]}>Campaign End Date</Text>
+                                    <View style={[styles.dateInput, { backgroundColor: theme.card, borderColor: theme.border, opacity: 0.7 }]}>
+                                        <Text style={[styles.dateInputText, { color: theme.textSecondary }]}>
+                                            {formatDate(endDate)}
                                         </Text>
-                                        <View
-                                            style={[
-                                                styles.dateField,
-                                                {
-                                                    borderColor: theme.border,
-                                                    paddingVertical: isLandscape ? 7 : 10,
-                                                },
-                                            ]}
-                                        >
-                                            <Text style={[styles.dateValue, { color: theme.text, fontSize: dateFontSize }]}>
-                                                {formatDate(endDate)}
-                                            </Text>
-                                            <Ionicons name="lock-closed-outline" size={isLandscape ? 12 : 14} color={theme.textSecondary} />
-                                        </View>
+                                        <Ionicons name="calendar" size={18} color={theme.textSecondary} />
                                     </View>
                                 </View>
-
-                                {selectedPkg && (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-                                        <Text style={[styles.durationHint, { color: theme.textSecondary, fontSize: isLandscape ? 12 : 14, marginTop: 0 }]}>
-                                            Duration ({selectedPkg.name}):
-                                        </Text>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                            <TouchableOpacity 
-                                                onPress={decrementQuantity} 
-                                                disabled={quantity <= 1}
-                                                style={{ backgroundColor: theme.background, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.border, opacity: quantity <= 1 ? 0.4 : 1 }}
-                                            >
-                                                <Ionicons name="remove" size={18} color={theme.text} />
-                                            </TouchableOpacity>
-                                            <View style={{ minWidth: 60, alignItems: 'center' }}>
-                                                <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>
-                                                    {quantity} {quantity === 1 ? (selectedPkg.id === 'daily' ? 'Day' : selectedPkg.id === 'weekly' ? 'Week' : 'Month') : (selectedPkg.id === 'daily' ? 'Days' : selectedPkg.id === 'weekly' ? 'Weeks' : 'Months')}
-                                                </Text>
-                                            </View>
-                                            <TouchableOpacity 
-                                                onPress={incrementQuantity}
-                                                style={{ backgroundColor: theme.background, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: theme.border }}
-                                            >
-                                                <Ionicons name="add" size={18} color={theme.text} />
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
-                                )}
                             </View>
 
                             {/* Native date picker */}
@@ -397,7 +273,7 @@ export default memo(function PackageSelectionModal({
                         <TouchableOpacity
                             style={[
                                 styles.mainActionBtn,
-                                { height: ctaHeight, marginTop: isLandscape ? 6 : 10 },
+                                { height: ctaHeight, marginTop: isLandscape ? 6 : 10, backgroundColor: isAlreadyInCart ? theme.border : theme.tint },
                                 isAlreadyInCart && { backgroundColor: theme.border }
                             ]}
                             onPress={isAlreadyInCart ? undefined : handleAddToCart}
@@ -415,39 +291,32 @@ export default memo(function PackageSelectionModal({
                             </Text>
                         </TouchableOpacity>
                     </View>
-                </View>
-            </Pressable>
+            </View>
         </Modal>
     );
 });
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1 },
-    sheetWrapper: {
+    overlay: {
         flex: 1,
-    },
-    sheetWrapperBottom: {
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
     },
-    sheetWrapperCentered: {
-        justifyContent: 'center',
-        alignItems: 'center',
+    modalContent: {
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingHorizontal: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        maxHeight: '90%',
     },
-    sheet: {
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 20,
-    },
-    dragHandle: {
+    handle: {
         width: 40,
         height: 5,
-        backgroundColor: '#888',
+        backgroundColor: '#D1D5DB',
         borderRadius: 3,
         alignSelf: 'center',
-        marginBottom: 20,
+        marginTop: 12,
+        marginBottom: 16,
     },
     header: {
         flexDirection: 'row',
@@ -456,71 +325,92 @@ const styles = StyleSheet.create({
     },
     title: { fontWeight: '900', letterSpacing: -0.5 },
     subtitle: { marginTop: 2, fontWeight: '500' },
+    closeBtn: { padding: 4 },
     scrollContent: { paddingBottom: 8 },
     listPadding: { paddingBottom: 4 },
-    packageCard: { borderRadius: 20 },
-    pkgHeader: {
+    sectionLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        marginBottom: 10,
+    },
+    durationRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
+        gap: 10,
     },
-    pkgName: { fontWeight: '800', flex: 1, marginRight: 8 },
-    pkgPrice: { fontWeight: '900', color: '#FF2D55' },
-    perDay: { fontSize: 11, fontWeight: '500', color: '#FF2D55' },
-    featureRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    featuresWrap: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 6,
-    },
-    featureRowLandscape: {
-        marginRight: 8,
-    },
-    featureText: { fontWeight: '500' },
-    landscapeGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 4,
-    },
-    landscapeCardWrapper: {
+    durationCard: {
         flex: 1,
-        minWidth: '30%',
+        paddingVertical: 14,
+        paddingHorizontal: 8,
+        borderRadius: 14,
+        alignItems: 'center',
+    },
+    durationCardLabel: {
+        fontSize: 14,
+        fontWeight: '800',
+    },
+    durationCardSub: {
+        fontSize: 11,
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    durationHint: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 8,
+    },
+    multiplierRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    multiplierBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    multiplierDisplay: {
+        flex: 1,
+        height: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    multiplierValue: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    dateSection: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 24,
+    },
+    dateColumn: {
+        flex: 1,
+    },
+    dateInput: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+    },
+    dateInputText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
     mainActionBtn: {
-        backgroundColor: '#FF2D55',
-        borderRadius: 20,
+        borderRadius: 16,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
     },
     mainActionText: { color: 'white', fontWeight: '800' },
-    datesCard: { borderRadius: 20, borderWidth: 1 },
-    datesTitle: { fontWeight: '800', marginBottom: 14 },
-    datesRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    dateBlock: { flex: 1 },
-    dateLabel: {
-        fontWeight: '600',
-        marginBottom: 6,
-        textTransform: 'uppercase',
-        letterSpacing: 0.4,
-    },
-    dateField: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderWidth: 1.5,
-        borderRadius: 12,
-        paddingHorizontal: 10,
-    },
-    dateValue: { fontWeight: '700' },
-    arrowIcon: { marginTop: 18 },
-    durationHint: { fontWeight: '500', marginTop: 10 },
     iosDoneBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 8 },
     iosDoneText: { color: '#FF2D55', fontWeight: '700', fontSize: 15 },
 });

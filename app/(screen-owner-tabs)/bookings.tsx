@@ -21,8 +21,8 @@ import { useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
 import { BookingCard, Booking } from '@/components/ScreenOwnerComponents/BookingsComponents/BookingCard';
-import { fetchOwnerBookings, CampaignData } from '@/api/campaignService';
-import { clearCache } from '@/api/cacheService';
+import { OwnerBooking } from '@/api/ownerBookingService';
+import { useOwnerBookingStore } from '@/store/useOwnerBookingStore';
 
 export default function BookingsScreen() {
     const { width } = useWindowDimensions();
@@ -36,10 +36,8 @@ export default function BookingsScreen() {
 
     const scrollY = useRef(new Animated.Value(0)).current;
 
-    const [bookings, setBookings] = useState<CampaignData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [selectedBooking, setSelectedBooking] = useState<CampaignData | null>(null);
+    const { bookings, loading, refreshing, fetchBookings, refreshBookings } = useOwnerBookingStore();
+    const [selectedBooking, setSelectedBooking] = useState<OwnerBooking | null>(null);
     
     // Filter states
     const [showFilters, setShowFilters] = useState(false);
@@ -48,69 +46,54 @@ export default function BookingsScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            const loadBookings = async () => {
-                try {
-                    const data = await fetchOwnerBookings();
-                    setBookings(data);
-                } catch (error) {
-                    console.error("Failed to load owner bookings", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            loadBookings();
-        }, [])
+            fetchBookings();
+        }, [fetchBookings])
     );
 
     const onRefresh = async () => {
-        setRefreshing(true);
-        clearCache('campaigns_owner');
-        try {
-            const data = await fetchOwnerBookings();
-            setBookings(data);
-        } catch (error) {
-            console.error("Failed to refresh owner bookings", error);
-        } finally {
-            setRefreshing(false);
-        }
+        await refreshBookings();
     };
 
-    const mapCampaignToBooking = (campaign: CampaignData): Booking => {
-        let mappedStatus: 'Pending' | 'Completed' | 'Active' | 'Cancelled' = 'Pending';
-        if (campaign.status === 'ACTIVE') mappedStatus = 'Active';
-        if (campaign.status === 'COMPLETED') mappedStatus = 'Completed';
-        if (campaign.status === 'REJECTED') mappedStatus = 'Cancelled';
+    const mapOwnerBookingToUiBooking = (booking: OwnerBooking): Booking => {
+        const mappedStatus = mapStatusForUi(booking.status);
         
-        const locationStr = campaign.screen?.city 
-            ? `${campaign.screen.city}, ${campaign.screen.country || ''}`
-            : campaign.screen?.location || 'Unknown Location';
-
         return {
-            id: campaign.id,
-            venue: `${campaign.screen?.name || 'Screen'}, ${locationStr}`,
-            orderNo: campaign.transactionReference.substring(0, 10).toUpperCase(),
-            startDate: new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            endDate: new Date(campaign.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            id: String(booking.id),
+            venue: `${booking.venue}, ${booking.location}`,
+            orderNo: booking.order_number.substring(0, 10).toUpperCase(),
+            startDate: formatDateSafely(booking.start_date),
+            endDate: formatDateSafely(booking.end_date),
             status: mappedStatus,
         };
     };
 
+    const mapStatusForUi = (status: string): 'Pending' | 'Completed' | 'Active' | 'Cancelled' => {
+        if (status === 'active' || status === 'approved') return 'Active';
+        if (status === 'completed') return 'Completed';
+        if (status === 'rejected' || status === 'cancelled') return 'Cancelled';
+        return 'Pending';
+    };
+
+    const formatDateSafely = (dateString: string): string => {
+        return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
     const filteredBookings = useMemo(() => {
-        return bookings.filter(campaign => {
-            const booking = mapCampaignToBooking(campaign);
+        return bookings.filter(ownerBooking => {
+            const uiBooking = mapOwnerBookingToUiBooking(ownerBooking);
             
             // Search filter
-            const matchesSearch = booking.venue.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                booking.orderNo.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = uiBooking.venue.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                uiBooking.orderNo.toLowerCase().includes(searchQuery.toLowerCase());
             
             // Status filter
-            const matchesStatus = statusFilter === 'All' || booking.status === statusFilter;
+            const matchesStatus = statusFilter === 'All' || uiBooking.status === statusFilter;
             
             return matchesSearch && matchesStatus;
         });
     }, [bookings, searchQuery, statusFilter]);
 
-    const renderItem = ({ item, index }: { item: CampaignData; index: number }) => {
+    const renderItem = ({ item, index }: { item: OwnerBooking; index: number }) => {
         const ITEM_SIZE = 160; 
         
         const scale = scrollY.interpolate({
@@ -126,7 +109,7 @@ export default function BookingsScreen() {
         return (
             <Animated.View style={{ opacity, transform: [{ scale }] }}>
                 <BookingCard 
-                    booking={mapCampaignToBooking(item)}
+                    booking={mapOwnerBookingToUiBooking(item)}
                     onView={() => setSelectedBooking(item)}
                     onAccept={() => {}}
                     onDecline={() => {}}
@@ -231,7 +214,7 @@ export default function BookingsScreen() {
             ) : (
                 <Animated.FlatList
                     data={filteredBookings}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => String(item.id)}
                     contentContainerStyle={styles.listContent}
                     renderItem={renderItem}
                     refreshControl={
@@ -264,37 +247,37 @@ export default function BookingsScreen() {
                             <View style={styles.modalRow}>
                                 <View style={{ flex: 2 }}>
                                     <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Venue</Text>
-                                    <Text style={[styles.modalValue, { color: theme.text }]} numberOfLines={2}>{selectedBooking.screen?.name}</Text>
-                                    <Text style={[styles.modalSubValue, { color: theme.textSecondary }]}>{selectedBooking.screen?.city || selectedBooking.screen?.location}, {selectedBooking.screen?.country}</Text>
+                                    <Text style={[styles.modalValue, { color: theme.text }]} numberOfLines={2}>{selectedBooking.venue}</Text>
+                                    <Text style={[styles.modalSubValue, { color: theme.textSecondary }]}>{selectedBooking.location}</Text>
                                 </View>
                                 <View style={{ flex: 1, alignItems: 'flex-end' }}>
                                     <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Amount Paid</Text>
-                                    <Text style={[styles.modalValue, { color: ownerTint }]}>₦{selectedBooking.pricePaid?.toLocaleString() || '0.00'}</Text>
+                                    <Text style={[styles.modalValue, { color: ownerTint }]}>₦{selectedBooking.amount_paid?.toLocaleString() || '0.00'}</Text>
                                 </View>
                             </View>
                             
                             <View style={styles.modalRow}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Order Number</Text>
-                                    <Text style={[styles.modalValue, { color: theme.text }]}>{selectedBooking.transactionReference.substring(0, 10).toUpperCase()}</Text>
+                                    <Text style={[styles.modalValue, { color: theme.text }]}>{selectedBooking.order_number.substring(0, 10).toUpperCase()}</Text>
                                 </View>
                             </View>
                             
                             <View style={styles.modalRow}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>Start Date</Text>
-                                    <Text style={[styles.modalValue, { color: theme.text }]}>{new Date(selectedBooking.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                                    <Text style={[styles.modalValue, { color: theme.text }]}>{formatDateSafely(selectedBooking.start_date)}</Text>
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>End Date</Text>
-                                    <Text style={[styles.modalValue, { color: theme.text }]}>{new Date(selectedBooking.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                                    <Text style={[styles.modalValue, { color: theme.text }]}>{formatDateSafely(selectedBooking.end_date)}</Text>
                                 </View>
                             </View>
                             
                             <Text style={[styles.modalLabel, { color: theme.textSecondary, marginTop: 24, marginBottom: 12 }]}>Preview</Text>
                             <View style={[styles.previewContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                                {selectedBooking.mediaUrl ? (
-                                    <Image source={{ uri: selectedBooking.mediaUrl }} style={styles.previewImage} contentFit="contain" />
+                                {selectedBooking.media_url ? (
+                                    <Image source={{ uri: selectedBooking.media_url }} style={styles.previewImage} contentFit="contain" />
                                 ) : (
                                     <Text style={{ color: theme.textSecondary }}>No Preview Available</Text>
                                 )}

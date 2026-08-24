@@ -23,22 +23,21 @@ import VideoPlayerItem from '@/components/VideoPlayerItem';
 
 import { useAddScreenForm } from '@/hooks/useAddScreenForm';
 
-const VENUE_OPTIONS = [
-    "Cinemas", "Co-Working Spaces", "Gyms & Fitness Centers", "Laundromat",
-    "Lounges & Bars", "Music Studio", "Restaurants", "Supermarket & Shopping Malls",
-    "Transit"
-];
-
 export default function AddScreenScreen() {
     // ─── Logic (all state + API calls live in the hook) ───────────────────
     const {
+        mode,
         form, extra, customVenueType, setCustomVenueType,
         mediaFiles, loading, uploadProgress, fetchingDraft, params,
         pickerVisible, setPickerVisible, pickerData, openDropdown,
         handleFormChange, handleExtraChange,
         pickMedia, removeMedia,
         handleSaveDraft, submitScreen,
+        saveChanges, savingChanges,
+        categoryNames, countryNames, stateNames,
+        selectCategory, selectCountry, selectState,
     } = useAddScreenForm();
+    const isEditMode = mode === 'edit';
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const theme = useAppTheme();
@@ -120,14 +119,20 @@ export default function AddScreenScreen() {
             {/* Header */}
             <View style={[styles.header, { backgroundColor: theme.card, paddingTop: Platform.OS === 'ios' ? insets.top + 10 : 42 }]}>
                 <TouchableOpacity
-                    onPress={() => router.replace('/(screen-owner-tabs)/dashboard')}
+                    onPress={() => isEditMode ? router.back() : router.replace('/(screen-owner-tabs)/dashboard')}
                     style={styles.closeBtn}
                 >
                     <Ionicons name="close" size={24} color={theme.text} />
                 </TouchableOpacity>
 
                 <Text style={[styles.headerTitle, { color: theme.text }]}>
-                    {params.draftId && params.draftId !== 'NEW' ? 'Continue Setup' : 'Add New Screen'}
+                    {isEditMode
+                        ? 'Edit Screen'
+                        : params.cloneFrom
+                            ? 'Duplicate Screen'
+                            : params.draftId && params.draftId !== 'NEW'
+                                ? 'Continue Setup'
+                                : 'Add New Screen'}
                 </Text>
 
                 <View style={{ width: 24 }} />
@@ -148,7 +153,7 @@ export default function AddScreenScreen() {
 
                 {/* Screen Emails */}
                 <View style={styles.formGroup}>
-                    <Text style={[styles.label, { color: theme.text }]}>Screen Emails *</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Screen Emails</Text>
                     {renderInput('Enter multiple emails separated by commas', extra.emails, (val) => handleExtraChange('emails', val))}
                     <Text style={[styles.helperText, { color: theme.textSecondary }]}>
                         {'e.g. screen1@mail.com, screen2@mail.com'}
@@ -171,7 +176,7 @@ export default function AddScreenScreen() {
 
                 {/* Venue Category */}
                 {renderSelectButton('Venue Category', form.venueType, () =>
-                    openDropdown('Venue Category', [...VENUE_OPTIONS, 'Other'], (val) => handleFormChange('venueType', val))
+                    openDropdown('Venue Category', [...categoryNames, 'Other'], selectCategory)
                 )}
 
                 {form.venueType === 'Other' && (
@@ -184,27 +189,27 @@ export default function AddScreenScreen() {
                 {/* Country & State */}
                 <View style={styles.row}>
                     <View style={styles.col}>
-                        {renderSelectButton('Country', extra.country, () =>
-                            openDropdown('Country', ['Nigeria', 'Ghana', 'Kenya', 'United Kingdom'], (val) => handleExtraChange('country', val))
+                        {renderSelectButton('Country', form.country, () =>
+                            openDropdown('Country', countryNames, selectCountry)
                         )}
                     </View>
                     <View style={styles.col}>
                         {renderSelectButton('State', form.state, () =>
-                            openDropdown('State', ['Lagos', 'Abuja (FCT)', 'Oyo', 'Rivers', 'Kano', 'Delta'], (val) => handleFormChange('state', val))
+                            openDropdown('State', stateNames, selectState)
                         )}
                     </View>
                 </View>
 
-                {/* City & Address */}
-                <View style={styles.row}>
-                    <View style={styles.col}>
-                        <Text style={[styles.label, { color: theme.text }]}>City *</Text>
-                        {renderInput('e.g. Ikeja', form.city, (val) => handleFormChange('city', val))}
-                    </View>
-                    <View style={styles.col}>
-                        <Text style={[styles.label, { color: theme.text }]}>Full Address *</Text>
-                        {renderInput('123 Example St', form.address, (val) => handleFormChange('address', val))}
-                    </View>
+                {/* Address */}
+                <View style={styles.formGroup}>
+                    <Text style={[styles.label, { color: theme.text }]}>Full Address *</Text>
+                    {renderInput('123 Example St', form.address, (val) => handleFormChange('address', val))}
+                </View>
+
+                {/* Vendor Note */}
+                <View style={styles.formGroup}>
+                    <Text style={[styles.label, { color: theme.text }]}>Vendor Note</Text>
+                    {renderInput('Optional note for our review team...', extra.vendorNote, (val) => handleExtraChange('vendorNote', val))}
                 </View>
 
                 {/* ── Location Insights ── */}
@@ -217,7 +222,7 @@ export default function AddScreenScreen() {
                 <View style={styles.row}>
                     <View style={styles.col}>
                         <Text style={[styles.label, { color: theme.text }]}>Average Monthly Visitors *</Text>
-                        {renderInput('e.g. 5000', form.dailyTraffic, (val) => handleFormChange('dailyTraffic', val), false, 'numeric')}
+                        {renderInput('e.g. 5000', form.monthlyVisitors, (val) => handleFormChange('monthlyVisitors', val), false, 'numeric')}
                     </View>
                     <View style={styles.col}>
                         <Text style={[styles.label, { color: theme.text }]}>Target Audience *</Text>
@@ -259,7 +264,7 @@ export default function AddScreenScreen() {
                     </View>
                     <View style={styles.col3}>
                         <Text style={[styles.label, { color: theme.text }]}>Dimensions *</Text>
-                        {renderInput('e.g. 1920x1080', form.resolution, (val) => handleFormChange('resolution', val))}
+                        {renderInput('e.g. 1920x1080', form.dimensions, (val) => handleFormChange('dimensions', val))}
                     </View>
                     <View style={styles.col3}>
                         {renderSelectButton('Orientation', extra.orientation, () =>
@@ -305,62 +310,84 @@ export default function AddScreenScreen() {
                 </View>
 
                 {/* ── Media Upload ── */}
-                <View style={styles.sectionDivider} />
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>Upload Venue Media *</Text>
-                <View style={styles.uploadRow}>
-                    {mediaFiles.map((file, index) => (
-                        <View key={index} style={[styles.uploadBox, { borderColor: theme.border }]}>
-                            {file.type === 'image' ? (
-                                <Image source={{ uri: file.uri }} style={styles.previewImage} />
-                            ) : (
-                                <VideoPlayerItem
-                                    uri={file.uri}
-                                    style={styles.previewImage}
-                                    shouldPlay={false}
-                                />
+                {/* Editing an existing screen manages photos/videos one slot
+                    at a time from the Manage Screen page instead. */}
+                {!isEditMode && (
+                    <>
+                        <View style={styles.sectionDivider} />
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>Upload Venue Media *</Text>
+                        <View style={styles.uploadRow}>
+                            {mediaFiles.map((file, index) => (
+                                <View key={index} style={[styles.uploadBox, { borderColor: theme.border }]}>
+                                    {file.type === 'image' ? (
+                                        <Image source={{ uri: file.uri }} style={styles.previewImage} />
+                                    ) : (
+                                        <VideoPlayerItem
+                                            uri={file.uri}
+                                            style={styles.previewImage}
+                                            shouldPlay={false}
+                                        />
+                                    )}
+                                    <TouchableOpacity style={styles.removeBadge} onPress={() => removeMedia(index)}>
+                                        <Ionicons name="close-circle" size={18} color={theme.error} />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                            {mediaFiles.length < 5 && (
+                                <TouchableOpacity
+                                    style={[styles.uploadBox, { borderColor: theme.border, borderStyle: 'dashed' }]}
+                                    activeOpacity={0.6}
+                                    onPress={pickMedia}
+                                >
+                                    <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
+                                    <Text style={[styles.uploadText, { color: theme.textSecondary }]}>Add File</Text>
+                                </TouchableOpacity>
                             )}
-                            <TouchableOpacity style={styles.removeBadge} onPress={() => removeMedia(index)}>
-                                <Ionicons name="close-circle" size={18} color={theme.error} />
-                            </TouchableOpacity>
                         </View>
-                    ))}
-                    {mediaFiles.length < 5 && (
-                        <TouchableOpacity
-                            style={[styles.uploadBox, { borderColor: theme.border, borderStyle: 'dashed' }]}
-                            activeOpacity={0.6}
-                            onPress={pickMedia}
-                        >
-                            <Ionicons name="cloud-upload-outline" size={24} color={theme.textSecondary} />
-                            <Text style={[styles.uploadText, { color: theme.textSecondary }]}>Add File</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
+                    </>
+                )}
 
                 {/* ── Action Buttons ── */}
                 <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={[styles.draftBtn, { backgroundColor: theme.tint }]}
-                        activeOpacity={0.8}
-                        onPress={handleSaveDraft}
-                        disabled={loading}
-                    >
-                        {loading
-                            ? <Text style={styles.draftBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Saving...'}</Text>
-                            : <Text style={styles.draftBtnText}>Save as Draft</Text>
-                        }
-                    </TouchableOpacity>
+                    {isEditMode ? (
+                        <TouchableOpacity
+                            style={[styles.submitBtn, { backgroundColor: ownerTint, flex: 1 }]}
+                            activeOpacity={0.8}
+                            onPress={saveChanges}
+                            disabled={savingChanges}
+                        >
+                            {savingChanges
+                                ? <ActivityIndicator color="#FFFFFF" />
+                                : <Text style={styles.submitBtnText}>Save Changes</Text>
+                            }
+                        </TouchableOpacity>
+                    ) : (
+                        <>
+                            <TouchableOpacity
+                                style={[styles.draftBtn, { backgroundColor: theme.tint }]}
+                                activeOpacity={0.8}
+                                onPress={handleSaveDraft}
+                                disabled={loading}
+                            >
+                                {loading
+                                    ? <Text style={styles.draftBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Saving...'}</Text>
+                                    : <Text style={styles.draftBtnText}>Save as Draft</Text>
+                                }
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.submitBtn, { backgroundColor: ownerTint }]}
-                        activeOpacity={0.8}
-                        onPress={submitScreen}
-                        disabled={loading}
-                    >
-                        {loading
-                            ? <Text style={styles.submitBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Submitting...'}</Text>
-                            : <Text style={styles.submitBtnText}>Submit Screen</Text>
-                        }
-                    </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.submitBtn, { backgroundColor: ownerTint }]}
+                                activeOpacity={0.8}
+                                onPress={submitScreen}
+                                disabled={loading}
+                            >
+                                {loading
+                                    ? <Text style={styles.submitBtnText}>{uploadProgress > 0 ? `Uploading ${uploadProgress}%` : 'Submitting...'}</Text>
+                                    : <Text style={styles.submitBtnText}>Submit Screen</Text>
+                                }
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
 
                 <View style={{ height: insets.bottom + 60 }} />

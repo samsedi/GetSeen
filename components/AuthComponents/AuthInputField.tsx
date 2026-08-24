@@ -95,8 +95,7 @@ export function PasswordInputField({
     );
 }
 
-// Ensure default export is maintained so existing imports don't instantly break before we refactor screens
-export default AuthInputField;
+// Removed unused default export
 
 const styles = StyleSheet.create({
     inputGroup: { gap: 8, marginBottom: 16 },

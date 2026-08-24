@@ -59,15 +59,21 @@ export default function WishlistScreen() {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View style={styles.grid}>
-                            {validatedWishlist.map((item) => (
-                                <View key={item.id} style={styles.gridCardWrapper}>
-                                    {/* LocationCard now uses its own internal Zustand logic,
-                                        so it won't trigger a parent re-render when clicked */}
+                        <FlatList
+                            horizontal
+                            data={validatedWishlist}
+                            keyExtractor={(item) => item.id || Math.random().toString()}
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalList}
+                            snapToInterval={isTablet ? 236 : 196} // Card width + margin (220+16 or 180+16)
+                            decelerationRate="fast"
+                            snapToAlignment="start"
+                            renderItem={({ item }) => (
+                                <View style={styles.horizontalCardWrapper}>
                                     <LocationCard item={item} />
                                 </View>
-                            ))}
-                        </View>
+                            )}
+                        />
                     )}
                 </View>
 
@@ -124,8 +130,14 @@ const createStyles = (isTablet: boolean, theme: AppTheme) => StyleSheet.create({
         textTransform: 'uppercase',
     },
     sectionDivider: { height: 1, backgroundColor: theme.border, marginHorizontal: 20, marginVertical: 25 },
-    grid: { paddingHorizontal: 20, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    gridCardWrapper: { width: isTablet ? '48%' : '100%', marginBottom: 10 },
+    grid: { 
+        paddingHorizontal: 20, 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        justifyContent: 'flex-start',
+        rowGap: isTablet ? 20 : 16,
+        columnGap: 10,
+    },
     horizontalList: { paddingLeft: 20, paddingRight: 20 },
     horizontalCardWrapper: { marginRight: 16 },
     emptyBox: {

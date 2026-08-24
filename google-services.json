@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "953860745089",
+    "project_id": "getseen-e16e7",
+    "storage_bucket": "getseen-e16e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:953860745089:android:22b68cf194c7a55cd9ea80",
+        "android_client_info": {
+          "package_name": "com.getseen.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbwHe8amAjFV411NF2g99RFMq27tMznD4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -20,13 +20,14 @@ import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
 
 import OwnerHeader from '@/components/ScreenOwnerComponents/DashboardComponents/OwnerHeader';
 import DashboardOverview from '@/components/ScreenOwnerComponents/DashboardComponents/DashboardOverview';
+import OnboardingChecklist from '@/components/ScreenOwnerComponents/DashboardComponents/OnboardingChecklist';
 import ScreenCard from '@/components/ScreenOwnerComponents/DashboardComponents/ScreenCard';
 
 import { useDashboard } from '@/hooks/useDashboard';
 
 export default function DashboardScreen() {
     // ─── Logic (all state + data-fetching lives in the hook) ───────────────
-    const { displayedScreens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats, refreshing, onRefresh } = useDashboard();
+    const { displayedScreens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats, onboarding, refreshing, onRefresh } = useDashboard();
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
@@ -82,6 +83,8 @@ export default function DashboardScreen() {
                 }
             >
                 <DashboardOverview stats={stats} />
+
+                <OnboardingChecklist onboarding={onboarding} />
 
                 <View style={styles.section}>
                     {/* Section header + tab toggle */}

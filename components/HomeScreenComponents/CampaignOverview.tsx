@@ -1,67 +1,56 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
-import { StyleSheet, Text, View, useColorScheme, useWindowDimensions, ActivityIndicator } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { StyleSheet, Text, View, useColorScheme, useWindowDimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography } from '@/constants/theme';
-import { fetchDashboardStats, DashboardStats } from '@/api/campaignService';
+import { useAppStore } from '@/store/appStore';
 
 type Theme = typeof Colors.light;
 
 export default function CampaignOverview() {
+    const router = useRouter();
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
 
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
 
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    const hasFetchedRef = useRef(false);
-
-    useFocusEffect(
-        useCallback(() => {
-            if (hasFetchedRef.current) return;
-            const loadStats = async () => {
-                try {
-                    const data = await fetchDashboardStats();
-                    setStats(data);
-                    hasFetchedRef.current = true;
-                } catch (error) {
-                    console.error("Failed to load dashboard stats", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            loadStats();
-        }, [])
-    );
+    const { bootstrapData, isBootstrapping } = useAppStore();
+    
+    // Wire up active campaigns from bootstrap data.
+    // The others are stubbed to 0 until the backend provides them.
+    const activeCampaigns = bootstrapData?.dashboard?.active_orders_count || 0;
+    const totalQrCodes = 0;
+    const monthlySpend = 0;
+    const totalSpend = 0;
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
 
-    const formattedMonthlySpend = stats 
-        ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(stats.monthlySpend || 0)
-        : '₦0.00';
-
-    const formattedTotalSpend = stats 
-        ? new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(stats.totalSpend || 0)
-        : '₦0.00';
+    const formattedMonthlySpend = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(monthlySpend);
+    const formattedTotalSpend = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(totalSpend);
 
     return (
         <View style={styles.container}>
-            <Text style={styles.sectionTitle}>Campaign overview</Text>
+            <View style={styles.headerRow}>
+                <Text style={styles.sectionTitle}>Campaign overview</Text>
+                <TouchableOpacity activeOpacity={0.7} style={styles.mediaButton} onPress={() => router.push('/homeSubScreens/mymedia')}>
+                    <Ionicons name="images-outline" size={isTablet ? 18 : 14} color={theme.tint} />
+                    <Text style={styles.mediaButtonText}>My Media</Text>
+                </TouchableOpacity>
+            </View>
 
             <View style={styles.gridContainer}>
-                {loading ? (
+                {isBootstrapping && !bootstrapData ? (
                     <ActivityIndicator size="small" color={theme.tint} style={{ marginVertical: 30 }} />
                 ) : (
                     <>
                         <View style={styles.row}>
                             <View style={[styles.card, styles.halfWidthCard]}>
-                                <Text style={styles.metricValue}>{stats?.activeCampaigns || 0}</Text>
+                                <Text style={styles.metricValue}>{activeCampaigns}</Text>
                                 <Text style={styles.metricLabel}>Active Campaigns</Text>
                             </View>
                             <View style={[styles.card, styles.halfWidthCard]}>
-                                <Text style={styles.metricValue}>{stats?.totalQrCodes || 0}</Text>
+                                <Text style={styles.metricValue}>{totalQrCodes}</Text>
                                 <Text style={styles.metricLabel}>Total QR Codes</Text>
                             </View>
                         </View>
@@ -88,11 +77,30 @@ const createStyles = (isTablet: boolean, theme: Theme) => StyleSheet.create({
         paddingHorizontal: 20,
         marginVertical: isTablet ? 20 : 13,
     },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
     sectionTitle: {
         ...Typography.h2,
         color: theme.text,
-        marginBottom: 10,
         fontSize: isTablet ? 22 : 16,
+    },
+    mediaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: `${theme.tint}15`,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
+    },
+    mediaButtonText: {
+        fontSize: isTablet ? 14 : 12,
+        color: theme.tint,
+        fontWeight: '600',
     },
     gridContainer: {
         backgroundColor: theme.cardGrid,

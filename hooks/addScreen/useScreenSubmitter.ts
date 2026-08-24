@@ -1,73 +1,37 @@
 import { useState } from 'react';
-import screenApi from '@/api/screenService';
+import ownerScreenApi from '@/api/ownerScreenService';
 import { useAlertStore } from '@/store/useAlertStore';
+import { useOwnerScreenStore } from '@/store/useOwnerScreenStore';
 import { useRouter } from 'expo-router';
 import { AddScreenForm, AddScreenExtra, LocalMediaFile } from './types';
+import { parsePercentage, parseScreenCount, appendScreenMetadata, appendLocalMedia } from './screenFormData';
 
-// Pure payload builder
-const buildPayload = (form: AddScreenForm, extra: AddScreenExtra, customVenueType: string) => {
-    const resolvedVenueType = form.venueType === 'Other' ? customVenueType.trim() : form.venueType;
-    const parsedEmails = extra.emails
-        ? extra.emails.split(',').map((e) => e.trim()).filter((e) => e.length > 0)
-        : [];
-
-    return {
-        name: form.name.trim() || undefined,
-        venueType: resolvedVenueType.trim() || undefined,
-        address: form.address.trim() || undefined,
-        city: form.city.trim() || undefined,
-        state: form.state.trim() || undefined,
-        resolution: form.resolution.trim() || undefined,
-        targetAudience: form.targetAudience.trim() || undefined,
-        dailyTraffic: form.dailyTraffic ? parseInt(form.dailyTraffic, 10) : undefined,
-        description: extra.description.trim() || undefined,
-        country: extra.country || undefined,
-        weekdaysHours: extra.weekdaysHours.trim() || undefined,
-        weekendsHours: extra.weekendsHours.trim() || undefined,
-        ageRange: extra.ageRange.trim() || undefined,
-        dwellTime: extra.dwellTime.trim() || undefined,
-        orientation: extra.orientation || undefined,
-        malePercentage: extra.malePercentage || undefined,
-        femalePercentage: extra.femalePercentage || undefined,
-        screenCount: extra.screenCount ? parseInt(extra.screenCount, 10) : undefined,
-        priceDaily: extra.priceDaily ? parseFloat(extra.priceDaily) : undefined,
-        priceWeekly: extra.priceWeekly ? parseFloat(extra.priceWeekly) : undefined,
-        priceMonthly: extra.priceMonthly ? parseFloat(extra.priceMonthly) : undefined,
-        screenEmails: parsedEmails.length > 0 ? parsedEmails : undefined,
-    };
-};
-
-const buildFormData = (payload: any, mediaFiles: LocalMediaFile[]) => {
+const buildFormData = (
+    action: 'draft' | 'submit',
+    form: AddScreenForm,
+    extra: AddScreenExtra,
+    customVenueType: string,
+    mediaFiles: LocalMediaFile[]
+) => {
     const formData = new FormData();
-    formData.append('data', JSON.stringify(payload));
-
-    mediaFiles
-        .filter((f) => !f.isRemote)
-        .forEach((file) => {
-            const ext = file.name.split('.').pop() || (file.type === 'video' ? 'mp4' : 'jpeg');
-            const mime = file.type === 'video' ? `video/${ext}` : `image/${ext}`;
-            formData.append('images', {
-                uri: file.uri,
-                name: file.name.endsWith(ext) ? file.name : `${file.name}.${ext}`,
-                type: mime,
-            } as any);
-        });
-
+    formData.append('action', action);
+    appendScreenMetadata(formData, form, extra, customVenueType);
+    appendLocalMedia(formData, mediaFiles);
     return formData;
 };
 
-// Isolated try/catch fetchers
 const saveDraftSafely = async (formData: FormData, currentDraftId?: string, onProgress?: (p: number) => void) => {
     try {
         if (currentDraftId) {
-            await screenApi.updateDraft(currentDraftId, formData, onProgress);
-            return currentDraftId;
+            const updated = await ownerScreenApi.updateScreen(currentDraftId, formData, onProgress);
+            return updated.id;
         } else {
-            const newDraft = await screenApi.createDraft(formData, onProgress);
-            return newDraft.id;
+            const created = await ownerScreenApi.createScreen(formData, onProgress);
+            return created.id;
         }
     } catch (error: any) {
-        useAlertStore.getState().showAlert('Draft Error', error.message || 'Could not save draft.');
+        const msg = error.response?.data?.error?.message || error.message || 'Could not save draft.';
+        useAlertStore.getState().showAlert('Draft Error', msg);
         return null;
     }
 };
@@ -75,14 +39,13 @@ const saveDraftSafely = async (formData: FormData, currentDraftId?: string, onPr
 const submitScreenSafely = async (formData: FormData, currentDraftId?: string, onProgress?: (p: number) => void) => {
     try {
         if (currentDraftId) {
-            await screenApi.updateDraft(currentDraftId, formData, onProgress);
-            await screenApi.publishDraft(currentDraftId);
+            await ownerScreenApi.updateScreen(currentDraftId, formData, onProgress);
         } else {
-            await screenApi.createScreen(formData, onProgress);
+            await ownerScreenApi.createScreen(formData, onProgress);
         }
         return true;
     } catch (error: any) {
-        const msg = error.message || error.response?.data?.debug_cause || 'Failed to finalize infrastructure asset submission.';
+        const msg = error.response?.data?.error?.message || error.message || 'Failed to submit screen for review.';
         useAlertStore.getState().showAlert('Submission Failed', msg);
         return false;
     }
@@ -103,66 +66,78 @@ export function useScreenSubmitter(
         const resolvedVenueType = form.venueType === 'Other' ? customVenueType.trim() : form.venueType;
         const hasMissingCoreFields =
             !form.name.trim() || !resolvedVenueType?.trim() || !form.address.trim() ||
-            !form.city.trim() || !form.state.trim() || !form.resolution.trim() ||
-            !form.targetAudience.trim() || !form.dailyTraffic.trim();
+            !form.countryId || !form.stateId || !form.dimensions.trim() ||
+            !form.targetAudience.trim() || !form.monthlyVisitors.trim();
 
         if (hasMissingCoreFields) return 'Please complete all required fields marked with *';
 
-        const hasMissingExtraFields = Object.values(extra).some(
-            (val) => typeof val === 'string' && !val.trim()
-        );
+        const requiredExtras: Array<keyof AddScreenExtra> = [
+            'weekdaysHours', 'weekendsHours', 'ageRange', 'dwellTime',
+            'screenCount', 'orientation', 'malePercentage', 'femalePercentage',
+            'priceDaily', 'priceWeekly', 'priceMonthly',
+        ];
+        const hasMissingExtraFields = requiredExtras.some((key) => !extra[key]?.trim());
         if (hasMissingExtraFields)
             return 'Every input metric, demographic segment, and pricing field must be completely filled.';
+
+        const malePct = parsePercentage(extra.malePercentage) ?? 0;
+        const femalePct = parsePercentage(extra.femalePercentage) ?? 0;
+        if (malePct + femalePct !== 100)
+            return 'Male and female percentage must add up to 100.';
 
         if (mediaFiles.length === 0)
             return 'Please attach at least one valid image or video asset showcasing the physical billboard layout.';
 
-        return null; 
+        return null;
     };
 
-    const handleSaveDraft = async () => {
+    const handleSaveDraft = async (): Promise<boolean> => {
         if (!form.name.trim()) {
             useAlertStore.getState().showAlert("Hold On", "Please give your screen a 'Venue Title' before saving it as a draft.");
-            return;
+            return false;
         }
 
         setLoading(true);
         setUploadProgress(0);
-        const payload = buildPayload(form, extra, customVenueType);
-        const formData = buildFormData(payload, mediaFiles);
+        const formData = buildFormData('draft', form, extra, customVenueType, mediaFiles);
         const savedId = await saveDraftSafely(formData, currentDraftId, setUploadProgress);
         setLoading(false);
 
         if (savedId) {
+            await useOwnerScreenStore.getState().refreshScreens();
             useAlertStore.getState().showAlert(
                 'Draft Saved',
                 'You can continue setting up this screen later from your dashboard.',
                 [{ text: 'OK', onPress: () => router.push('/(screen-owner-tabs)/dashboard') }]
             );
+            return true;
         }
+        return false;
     };
 
-    const submitScreen = async () => {
+    const submitScreen = async (): Promise<boolean> => {
         const validationError = validateForSubmit();
         if (validationError) {
             useAlertStore.getState().showAlert('Missing Fields', validationError);
-            return;
+            return false;
         }
 
         setLoading(true);
         setUploadProgress(0);
-        const payload = buildPayload(form, extra, customVenueType);
-        const formData = buildFormData(payload, mediaFiles);
+        const formData = buildFormData('submit', form, extra, customVenueType, mediaFiles);
         const success = await submitScreenSafely(formData, currentDraftId, setUploadProgress);
         setLoading(false);
 
         if (success) {
+            await useOwnerScreenStore.getState().refreshScreens();
             useAlertStore.getState().showAlert(
                 'Success',
-                'Screen layout successfully initialized in background stream!',
+                'Your screen has been submitted for review.',
                 [{ text: 'OK', onPress: () => router.push('/(screen-owner-tabs)/dashboard') }]
             );
+            return true;
         }
+        return false;
     };
 
     return { loading, uploadProgress, handleSaveDraft, submitScreen };

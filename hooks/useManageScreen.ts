@@ -1,25 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FlatList } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAlertStore } from '@/store/useAlertStore';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import screenApi, { ScreenResponseDto } from '@/api/screenService';
+import ownerScreenApi, { OwnerScreenImage, OwnerScreenResponse } from '@/api/ownerScreenService';
+import { useOwnerScreenStore } from '@/store/useOwnerScreenStore';
+
+const IMAGE_SLOT_COUNT = 5;
 
 // --------------------------------------------------------------------------
 // Isolated Try/Catch API wrappers
 // --------------------------------------------------------------------------
 const fetchScreenDetailsSafely = async (id: string) => {
     try {
-        return await screenApi.getScreenById(id);
+        const response = await ownerScreenApi.getScreenById(id);
+        // Extract screen from the expected backend response: { success: true, data: { screen: {...} } }
+        // Note: the backend might return { data: { ... } } without 'screen' key depending on exact layout, we adapt dynamically.
+        return response.data?.screen || (response.data as unknown as OwnerScreenResponse);
     } catch (error: any) {
         useAlertStore.getState().showAlert("Error", "Could not load screen details.");
         return null;
     }
 };
 
-const toggleVisibilitySafely = async (id: string) => {
+const toggleVisibilitySafely = async (id: string, currentStatus: string) => {
     try {
-        await screenApi.toggleVisibility(id);
+        const newStatus = currentStatus === 'online' ? 'offline' : 'online';
+        await ownerScreenApi.updateScreenStatus(id, newStatus);
         return true;
     } catch (error: any) {
         useAlertStore.getState().showAlert("Error", "Could not change visibility.");
@@ -29,25 +37,13 @@ const toggleVisibilitySafely = async (id: string) => {
 
 const deleteScreenSafely = async (id: string) => {
     try {
-        await screenApi.deleteScreen(id);
+        await ownerScreenApi.deleteScreen(id);
         useAlertStore.getState().showAlert("Deleted", "Screen removed successfully.");
         return true;
-    } catch (error) {
-        useAlertStore.getState().showAlert("Error", "Could not delete screen.");
-        return false;
-    }
-};
-
-const updateScreenSafely = async (id: string, payload: any) => {
-    try {
-        const formData = new FormData();
-        formData.append('data', JSON.stringify(payload));
-        const updated = await screenApi.updateScreen(id, formData);
-        useAlertStore.getState().showAlert("Success", "Slot specifications updated.");
-        return updated;
     } catch (error: any) {
-        useAlertStore.getState().showAlert("Update Failed", error.message);
-        return null;
+        const msg = error.response?.data?.error?.message || "Could not delete screen.";
+        useAlertStore.getState().showAlert("Error", msg);
+        return false;
     }
 };
 
@@ -84,34 +80,44 @@ export function useManageScreen() {
     const params = useLocalSearchParams();
     const router = useRouter();
     const screenId = params.id as string;
+    const updateScreenInStore = useOwnerScreenStore(state => state.updateScreenInStore);
 
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
-    const [screenData, setScreenData] = useState<ScreenResponseDto | null>(null);
+    const [screenData, setScreenData] = useState<OwnerScreenResponse | null>(null);
 
-    const [form, setForm] = useState({
-        name: '',
-        resolution: '',
-        address: ''
-    });
+    // Index of the image slot currently being uploaded to / removed from
+    // (image_1..image_5, by position), or null when none is in flight.
+    const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
 
-    const carousel = useScreenCarousel(screenData?.mediaUrls);
+    // Handle primary image and image urls array
+    const carouselMediaUrls = screenData?.image_urls || (screenData?.primary_image_url ? [screenData.primary_image_url] : []);
+    const carousel = useScreenCarousel(carouselMediaUrls);
 
-    useEffect(() => {
-        if (!screenId) return;
-        loadScreenDetails();
-    }, [screenId]);
+    // Slots are positional: slot i maps to image_{i+1} on the backend. The
+    // list endpoint doesn't return which key each image was uploaded under,
+    // so array order is treated as the slot order (matching upload order).
+    const imageSlots: (OwnerScreenImage | null)[] = Array.from(
+        { length: IMAGE_SLOT_COUNT },
+        (_, i) => screenData?.images?.[i] ?? null
+    );
+
+    // Refetch on every focus, not just first mount — this screen stays
+    // mounted in the stack while the user edits full details or manages
+    // media on the add-screen page, so returning via router.back() needs a
+    // fresh fetch to pick up what changed there.
+    useFocusEffect(
+        useCallback(() => {
+            if (!screenId) return;
+            loadScreenDetails();
+        }, [screenId])
+    );
 
     const loadScreenDetails = async () => {
         setLoading(true);
         const data = await fetchScreenDetailsSafely(screenId);
         if (data) {
             setScreenData(data);
-            setForm({
-                name: data.name || '',
-                resolution: data.resolution || '',
-                address: data.address || ''
-            });
         } else {
             router.back();
         }
@@ -119,12 +125,18 @@ export function useManageScreen() {
     };
 
     const handleToggleVisibility = async (newValue: boolean) => {
-        // Optimistic UI update
-        setScreenData(prev => prev ? { ...prev, active: newValue } : null);
-        const success = await toggleVisibilitySafely(screenId);
+        const newStatus = newValue ? 'online' : 'offline';
+        const oldStatus = newValue ? 'offline' : 'online';
+
+        // Optimistic UI update (both local and Zustand)
+        setScreenData(prev => prev ? { ...prev, status: newStatus } : null);
+        updateScreenInStore(screenId, newStatus);
+
+        const success = await toggleVisibilitySafely(screenId, screenData?.status || 'offline');
         if (!success) {
             // Revert on failure
-            setScreenData(prev => prev ? { ...prev, active: !newValue } : null);
+            setScreenData(prev => prev ? { ...prev, status: oldStatus } : null);
+            updateScreenInStore(screenId, oldStatus);
         }
     };
 
@@ -138,6 +150,7 @@ export function useManageScreen() {
                     setUpdating(true);
                     const success = await deleteScreenSafely(screenId);
                     if (success) {
+                        await useOwnerScreenStore.getState().refreshScreens();
                         router.push('/(screen-owner-tabs)/dashboard');
                     }
                     setUpdating(false);
@@ -146,27 +159,84 @@ export function useManageScreen() {
         ]);
     };
 
-    const handleSaveUpdates = async () => {
-        setUpdating(true);
-        const payload = {
-            ...screenData,
-            name: form.name,
-            resolution: form.resolution,
-            address: form.address
-        };
-
-        const updated = await updateScreenSafely(screenId, payload);
-        if (updated) {
-            setScreenData(updated);
-        }
-        setUpdating(false);
-    };
-
     const handleCopyDetails = async () => {
         if (!screenData) return;
-        const detailsText = `Slot ID: ${screenId}\nName: ${screenData.name}\nResolution: ${screenData.resolution}\nLocation: ${screenData.address}`;
+        const detailsText = `Slot ID: ${screenId}\nName: ${screenData.title}\nLocation: ${screenData.address}`;
         await Clipboard.setStringAsync(detailsText);
         useAlertStore.getState().showAlert("Copied", "Slot details copied to clipboard.");
+    };
+
+    const handleEditFull = () => {
+        router.push({
+            pathname: '/(screen-owner-tabs)/add-screen',
+            params: { draftId: screenId, mode: 'edit', timestamp: Date.now() },
+        });
+    };
+
+    const handleDuplicate = () => {
+        router.push({
+            pathname: '/(screen-owner-tabs)/add-screen',
+            params: { cloneFrom: screenId, timestamp: Date.now() },
+        });
+    };
+
+    const handleReplaceImageSlot = async (slotIndex: number) => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            useAlertStore.getState().showAlert('Permission Denied', 'We need camera roll access to select photos.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images', 'videos'],
+            allowsEditing: false,
+            quality: 0.8,
+        });
+        if (result.canceled || !result.assets?.length) return;
+
+        const asset = result.assets[0];
+        const isVideo = asset.type === 'video';
+        let name = asset.fileName || asset.uri.split('/').pop() || `media_${Date.now()}`;
+        if (!name.includes('.')) name = `${name}.${isVideo ? 'mp4' : 'jpeg'}`;
+        const ext = name.split('.').pop() as string;
+        const mime = isVideo ? `video/${ext}` : `image/${ext}`;
+
+        setUploadingSlot(slotIndex);
+        try {
+            await ownerScreenApi.uploadScreenImage(screenId, `image_${slotIndex + 1}`, asset.uri, name, mime);
+            const data = await fetchScreenDetailsSafely(screenId);
+            if (data) setScreenData(data);
+            await useOwnerScreenStore.getState().refreshScreens();
+        } catch (error: any) {
+            const msg = error.response?.data?.error?.message || error.message || 'Could not upload media.';
+            useAlertStore.getState().showAlert('Upload Failed', msg);
+        } finally {
+            setUploadingSlot(null);
+        }
+    };
+
+    const handleDeleteImageSlot = (slotIndex: number) => {
+        useAlertStore.getState().showAlert('Remove Media', 'Remove this photo or video from the screen?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Remove',
+                style: 'destructive',
+                onPress: async () => {
+                    setUploadingSlot(slotIndex);
+                    try {
+                        await ownerScreenApi.deleteScreenImage(screenId, `image_${slotIndex + 1}`);
+                        const data = await fetchScreenDetailsSafely(screenId);
+                        if (data) setScreenData(data);
+                        await useOwnerScreenStore.getState().refreshScreens();
+                    } catch (error: any) {
+                        const msg = error.response?.data?.error?.message || error.message || 'Could not remove media.';
+                        useAlertStore.getState().showAlert('Error', msg);
+                    } finally {
+                        setUploadingSlot(null);
+                    }
+                },
+            },
+        ]);
     };
 
     return {
@@ -174,15 +244,18 @@ export function useManageScreen() {
         loading,
         updating,
         screenData,
-        form,
-        setForm,
         activeIndex: carousel.activeIndex,
         setActiveIndex: carousel.setActiveIndex,
         flatListRef: carousel.flatListRef,
+        imageSlots,
+        uploadingSlot,
+        handleReplaceImageSlot,
+        handleDeleteImageSlot,
         handleToggleVisibility,
         handleDelete,
-        handleSaveUpdates,
         handleCopyDetails,
+        handleEditFull,
+        handleDuplicate,
         router
     };
 }

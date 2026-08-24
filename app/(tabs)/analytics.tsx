@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, Typography } from '@/constants/theme';
 
 export default function AnalyticsScreen() {
@@ -11,21 +11,18 @@ export default function AnalyticsScreen() {
 
     return (
         <View style={[styles.mainContent, { backgroundColor: theme.background }]}>
-            {/* HEADER */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Analytics</Text>
             </View>
-
-            {/* EMPTY STATE */}
             <View style={styles.emptyContainer}>
                 <View style={styles.illustrationCard}>
                     <View style={styles.innerGraphic}>
                         <Ionicons name="pie-chart" size={100} color={theme.tint} style={{opacity: 0.1}} />
-                        <Ionicons name="bar-chart" size={140} color={theme.tint} style={styles.floatingIcon} />
+                        <Ionicons name="stats-chart" size={140} color={theme.tint} style={styles.floatingIcon} />
                     </View>
                 </View>
                 <Text style={styles.emptyTitle}>Coming Soon</Text>
-                <Text style={styles.emptySubtitle}>Your analytics dashboard is currently under construction.</Text>
+                <Text style={styles.emptySubtitle}>Your overall campaign analytics dashboard is being built and will appear here.</Text>
             </View>
         </View>
     );

@@ -9,20 +9,34 @@ import {
     useWindowDimensions
 } from "react-native";
 import { Colors, Typography } from "@/constants/theme";
+import { Ionicons } from '@expo/vector-icons';
 
 type Theme = typeof Colors.light;
 
 // ✨ 1. Define and EXPORT the map here so HomeScreen can use the exact same logic
 export const CATEGORY_MAP: Record<string, string[]> = {
     'Restaurants': ['restaurant', 'cafe', 'bistro', 'eatery', 'food'],
+    'Bars & Lounges': ['bar', 'lounge', 'club', 'pub', 'nightclub', 'chill'],
+    'Malls & Marts': ['mall', 'shopping', 'plaza', 'retail', 'center', 'supermarket', 'grocery', 'mart', 'store'],
+    'BRT Buses': ['brt', 'bus', 'transit', 'terminal', 'transport'],
+    'Laundry': ['laundry', 'laundromat', 'cleaners', 'wash'],
     'Gyms': ['gym', 'fitness', 'workout', 'health club', 'training'],
-    'Malls': ['mall', 'shopping', 'plaza', 'retail', 'center'],
-    'Bars': ['bar', 'lounge', 'club', 'pub', 'nightclub'],
-    'Supermarkets': ['supermarket', 'grocery', 'mart', 'store'],
     'Cinemas': ['cinema', 'movie', 'theater', 'theatre'],
     'Co-working': ['co-working', 'workspace', 'office', 'hub'],
-    'Lounge': ['lounge', 'chill', 'bar'],
     'Offices': ['office', 'corporate', 'business']
+};
+
+const ICON_MAP: Record<string, keyof typeof Ionicons.glyphMap> = {
+    'For You': 'sparkles',
+    'Restaurants': 'restaurant',
+    'Bars & Lounges': 'wine',
+    'Malls & Marts': 'cart',
+    'BRT Buses': 'bus',
+    'Laundry': 'shirt',
+    'Gyms': 'barbell',
+    'Cinemas': 'film',
+    'Co-working': 'laptop',
+    'Offices': 'business'
 };
 
 // ✨ 2. Dynamically generate the tabs based on the map keys!
@@ -50,6 +64,7 @@ const VenueNavigation = ({ selected, setSelected }: Props) => {
             >
                 {VENUE_CATEGORIES.map((item) => {
                     const isActive = selected === item;
+                    const iconName = ICON_MAP[item] || 'location';
                     return (
                         <TouchableOpacity
                             key={item}
@@ -60,6 +75,11 @@ const VenueNavigation = ({ selected, setSelected }: Props) => {
                                 isActive ? styles.activeTab : styles.inactiveTab
                             ]}
                         >
+                            <Ionicons 
+                                name={iconName} 
+                                size={isTablet ? 16 : 14} 
+                                color={isActive ? theme.whiteHeader : theme.textSecondary} 
+                            />
                             <Text style={[
                                 styles.labelText,
                                 { color: isActive ? theme.whiteHeader : theme.textSecondary }
@@ -83,6 +103,8 @@ const createStyles = (isTablet: boolean, theme: Theme) => StyleSheet.create({
         gap: isTablet ? 12 : 8,
     },
     tab: {
+        flexDirection: 'row',
+        gap: 6,
         borderRadius: 30,
         borderWidth: 1,
         alignItems: 'center',

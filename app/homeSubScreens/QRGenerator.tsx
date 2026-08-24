@@ -1,30 +1,30 @@
-import React, { useMemo, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo } from 'react';
 import {
-    StyleSheet,
-    Text,
-    View,
     FlatList,
-    TouchableOpacity,
-    TextInput,
-    useWindowDimensions,
-    useColorScheme,
-    Platform,
     KeyboardAvoidingView,
     Modal,
-    Pressable
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    useColorScheme,
+    useWindowDimensions,
+    View
 } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 // Theme & Custom Hook
 import { Colors } from '@/constants/theme';
 import { useQRGenerator } from '@/hooks/useQRGenerator';
 
 // Components & Data
-import { SavedQR } from '@/constants/mockData';
 import { QRPreviewCard } from '@/components/QrComponents/QRPreviewCard';
 import { SavedQRCard } from '@/components/QrComponents/SavedQRCard';
+import { QrCodeResponse } from '@/api/qrService';
 
 /**
  * 1. Memoized Header Component
@@ -81,6 +81,7 @@ export default function QRGenerator() {
         websiteUrl,
         setWebsiteUrl,
         savedQRs,
+        loading,
         qrImageUrl,
         viewedQR,
         handleCreateQR,
@@ -89,12 +90,14 @@ export default function QRGenerator() {
         handleDismissView,
         handleReport,
         handleDelete,
+        loadMoreQRs,
+        hasMore,
         buildQrImageUrl,
     } = useQRGenerator();
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
 
-    const renderItem = useCallback(({ item }: { item: SavedQR }) => (
+    const renderItem = useCallback(({ item }: { item: QrCodeResponse }) => (
         <SavedQRCard
             qr={item}
             theme={theme}
@@ -123,7 +126,7 @@ export default function QRGenerator() {
             {/* Main Content List */}
             <FlatList
                 data={savedQRs}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, index) => String(item.id || index)}
                 ListHeaderComponent={
                     <ListHeaderComponent
                         qrName={qrName}
@@ -134,6 +137,26 @@ export default function QRGenerator() {
                         theme={theme}
                         styles={styles}
                     />
+                }
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        {loading ? (
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Loading...</Text>
+                        ) : (
+                            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                                You haven't saved any QR codes yet.
+                            </Text>
+                        )}
+                    </View>
+                }
+                ListFooterComponent={
+                    hasMore ? (
+                        <View style={styles.loadMoreContainer}>
+                            <TouchableOpacity style={styles.loadMoreBtn} onPress={loadMoreQRs} disabled={loading}>
+                                <Text style={styles.loadMoreText}>{loading ? 'Loading...' : 'Load More'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : null
                 }
                 renderItem={renderItem}
                 contentContainerStyle={styles.scrollContent}
@@ -158,7 +181,7 @@ export default function QRGenerator() {
                     onRequestClose={handleDismissView}
                 >
                     <Pressable style={styles.modalBackdrop} onPress={handleDismissView}>
-                        <Pressable style={[styles.modalCard, { backgroundColor: theme.card }]} onPress={() => {}}>
+                        <Pressable style={[styles.modalCard, { backgroundColor: theme.card }]} onPress={() => { }}>
                             <View style={styles.modalHeader}>
                                 <Text style={[styles.modalTitle, { color: theme.text }]}>{viewedQR.name}</Text>
                                 <TouchableOpacity onPress={handleDismissView} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -168,14 +191,14 @@ export default function QRGenerator() {
 
                             <View style={styles.modalQrContainer}>
                                 <Image
-                                    source={{ uri: buildQrImageUrl(viewedQR.url) }}
+                                    source={{ uri: viewedQR.image_url || buildQrImageUrl(viewedQR.original_url) }}
                                     style={styles.modalQrImage}
                                     contentFit="contain"
                                 />
                             </View>
 
                             <Text style={[styles.modalUrl, { color: theme.textSecondary }]} numberOfLines={2}>
-                                {viewedQR.url}
+                                {viewedQR.original_url}
                             </Text>
 
                             <TouchableOpacity
@@ -326,17 +349,30 @@ const createStyles = (isTablet: boolean, theme: any) => StyleSheet.create({
         marginBottom: 20,
     },
     modalDownloadBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 14,
-        width: '100%',
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 14, borderRadius: 16, marginTop: 10,
     },
-    modalDownloadText: {
-        color: 'white',
-        fontSize: 15,
-        fontWeight: '700',
+    modalDownloadText: { color: 'white', fontSize: 16, fontWeight: '700' },
+    loadMoreContainer: {
+        alignItems: 'center',
+        marginVertical: 16,
+    },
+    loadMoreBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        backgroundColor: 'rgba(43, 67, 115, 0.1)',
+    },
+    loadMoreText: {
+        color: '#2B4373',
+        fontWeight: 'bold',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
 });

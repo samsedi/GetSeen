@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 
 import { useAppTheme } from '@/constants/theme';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
-import AuthInputField from '@/components/AuthComponents/AuthInputField';
+import { AuthInputField } from '@/components/AuthComponents/AuthInputField';
 
 import { useForgotPassword } from '@/hooks/useForgotPassword';
 
@@ -18,7 +18,7 @@ export default function ForgotPassword() {
     const {
         email, error, loading, isButtonDisabled,
         handleEmailChange, handleSendResetLink, goBack,
-    } = useForgotPassword();
+    } = useForgotPassword('advertiser');
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
@@ -27,8 +27,8 @@ export default function ForgotPassword() {
     const theme = useAppTheme();
 
     const brandPink = theme.tint;
-    const errorRed = '#FF3B30';
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : theme.background;
+    const errorRed = theme.statusRed;
+    const inputBg = theme.inputBg;
 
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')

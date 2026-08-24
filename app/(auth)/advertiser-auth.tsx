@@ -1,18 +1,25 @@
-import React from 'react';
-import {
-    StyleSheet, View, ScrollView, TouchableOpacity,
-    Text, useColorScheme, Image, useWindowDimensions, ActivityIndicator,
-    KeyboardAvoidingView, Platform
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/theme';
+import React from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    useWindowDimensions,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
+import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
 import AuthPromoCard from '@/components/AuthComponents/AuthPromoCard';
 import AuthToggle from '@/components/AuthComponents/AuthToggle';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { AuthInputField, PasswordInputField } from '@/components/AuthComponents/AuthInputField';
+import TermsModal from '@/components/AuthComponents/TermsModal';
+import { PRIVACY_DATA } from '@/constants/PrivacyData';
 
 import { useAdvertiserAuth } from '@/hooks/useAdvertiserAuth';
 
@@ -34,11 +41,13 @@ export default function AdvertiserAuth() {
     const colorScheme = useColorScheme() ?? 'light';
     const theme = Colors[colorScheme];
     const router = useRouter();
+    const [showTerms, setShowTerms] = React.useState(false);
+    const [showPrivacy, setShowPrivacy] = React.useState(false);
 
     const brandPink = theme.tint;
-    const errorRed = '#FF3B30';
-    const inputBg = colorScheme === 'dark' ? '#1A1A1A' : '#FFFFFF';
-    const inputBorder = colorScheme === 'dark' ? '#333333' : '#D1D5DB';
+    const errorRed = theme.statusRed;
+    const inputBg = theme.inputBg;
+    const inputBorder = theme.inputBorder;
 
     const logoSource = colorScheme === 'dark'
         ? require('@/assets/images/getseen-dark-removebg-preview.png')
@@ -60,15 +69,15 @@ export default function AdvertiserAuth() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <KeyboardAwareScrollView 
+            <KeyboardAwareScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={styles.scrollContent} 
+                contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 enableOnAndroid={true}
                 extraScrollHeight={20}
             >
-                    <AuthPromoCard
+                <AuthPromoCard
                     title={isSignIn ? 'Welcome Back!' : 'Advertise Your Brand'}
                     subtitle={
                         isSignIn
@@ -199,8 +208,18 @@ export default function AdvertiserAuth() {
                                 </View>
                                 <Text style={[styles.checkboxText, { color: theme.textSecondary }]}>
                                     I agree to the{' '}
-                                    <Text style={{ color: brandPink }}>Terms</Text> and{' '}
-                                    <Text style={{ color: brandPink }}>Privacy</Text>
+                                    <Text 
+                                        style={{ color: brandPink }}
+                                        onPress={() => setShowTerms(true)}
+                                    >
+                                        General Terms of Service
+                                    </Text> and{' '}
+                                    <Text 
+                                        style={{ color: brandPink }}
+                                        onPress={() => setShowPrivacy(true)}
+                                    >
+                                        Privacy Policy
+                                    </Text>
                                 </Text>
                             </TouchableOpacity>
                         </>
@@ -222,6 +241,21 @@ export default function AdvertiserAuth() {
                     }
                 </TouchableOpacity>
             </KeyboardAwareScrollView>
+
+            <TermsModal 
+                visible={showTerms} 
+                onClose={() => setShowTerms(false)} 
+                brandColor={brandPink} 
+                title="General Terms of Service"
+            />
+            
+            <TermsModal 
+                visible={showPrivacy} 
+                onClose={() => setShowPrivacy(false)} 
+                brandColor={brandPink} 
+                title="Privacy Policy"
+                data={PRIVACY_DATA}
+            />
         </SafeAreaView>
     );
 }
@@ -239,4 +273,6 @@ const styles = StyleSheet.create({
     checkboxText: { fontSize: 13, flex: 1 },
     mainBtn: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
     mainBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
+    sendOtpBtn: { backgroundColor: '#FF2D55', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, marginRight: 5 },
+    sendOtpText: { color: 'white', fontSize: 12, fontWeight: '600' },
 });

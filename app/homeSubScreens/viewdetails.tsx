@@ -5,7 +5,6 @@ import {
     ScrollView,
     useWindowDimensions,
     Platform,
-    ActivityIndicator,
     Text,
 } from 'react-native';
 
@@ -34,23 +33,13 @@ export default function ViewDetails() {
 
     const styles = useMemo(() => createStyles(isTablet, theme), [isTablet, theme]);
 
-    if (loading) {
+    // If somehow there's truly no data (edge case), show a short error
+    if (!screen) {
         return (
             <View style={styles.container}>
                 <DetailHeader onBack={handleBack} isTablet={isTablet} />
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" color={theme.tint ?? '#FF2D55'} />
-                </View>
-            </View>
-        );
-    }
-
-    if (error || !screen) {
-        return (
-            <View style={styles.container}>
-                <DetailHeader onBack={handleBack} isTablet={isTablet} />
-                <View style={styles.centered}>
-                    <Text style={styles.errorText}>{error ?? 'Screen not found.'}</Text>
+                    <Text style={styles.errorText}>Screen not found.</Text>
                 </View>
             </View>
         );

@@ -28,6 +28,10 @@ export interface ScreenResponseDto {
     verificationStatus: string;
     mediaUrls: string[];
     active: boolean;
+    rating?: {
+        average: number;
+        count: number;
+    };
 }
 
 export interface ScreenDraftResponseDto {

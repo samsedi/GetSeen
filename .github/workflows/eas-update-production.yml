@@ -1,0 +1,32 @@
+name: Publish production update
+
+# Manual-only: publishes the current main branch as a JS-only OTA update to real users on
+# the "production" channel. Run this from the GitHub Actions tab after verifying the change
+# on the preview channel — nothing reaches production automatically.
+#
+# Note: this only ships JS/asset changes. If you added a native dependency or changed
+# app.config.js in a way that affects native code, you need a full `eas build` + store
+# submission instead — an OTA update can't do that.
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Publish to production channel
+        run: eas update --channel production --message "Promote to production: ${{ github.sha }}" --non-interactive

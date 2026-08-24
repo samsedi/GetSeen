@@ -1,78 +1,69 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import screenApi, { ScreenResponseDto } from '@/api/screenService';
-import { clearCache } from '@/api/cacheService';
+import { useEffect, useMemo, useCallback } from 'react';
 import { useReservationStore } from '@/store/useReservationStore';
 import { CATEGORY_MAP } from '@/components/HomeScreenComponents/VenueNavigation';
+import { useAdvertiserScreenStore } from '@/store/useAdvertiserScreenStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
+import useDebounce from './useDebounce';
+
+const PAGE_SIZE = 10;
 
 export function useHomeScreen() {
     const isModalVisible = useReservationStore((state) => state.isModalVisible);
     const activeLocation = useReservationStore((state) => state.activeLocation);
     const closeReservation = useReservationStore((state) => state.closeReservation);
 
-    const [screens, setScreens] = useState<ScreenResponseDto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [selectedVenue, setSelectedVenue] = useState('For You');
+    const screens = useAdvertiserScreenStore((state) => state.screens);
+    const loading = useAdvertiserScreenStore((state) => state.loading);
+    const refreshing = useAdvertiserScreenStore((state) => state.refreshing);
+    const fetchScreens = useAdvertiserScreenStore((state) => state.fetchScreens);
+    const refreshScreens = useAdvertiserScreenStore((state) => state.refreshScreens);
+    const loadMoreScreens = useAdvertiserScreenStore((state) => state.loadMoreScreens);
+    const loadLessScreens = useAdvertiserScreenStore((state) => state.loadLessScreens);
+    const pagination = useAdvertiserScreenStore((state) => state.pagination);
+    
+    const searchQuery = useAdvertiserScreenStore((state) => state.searchQuery);
+    const setSearchQuery = useAdvertiserScreenStore((state) => state.setSearchQuery);
+    const selectedVenue = useAdvertiserScreenStore((state) => state.selectedVenue);
+    const setSelectedVenue = useAdvertiserScreenStore((state) => state.setSelectedVenue);
 
-    const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearchQuery = useDebounce(searchQuery, 500);
+    const fetchWishlist = useWishlistStore((state) => state.fetchWishlist);
 
+    // On search query change: reset to page 1 and fetch fresh 10 from backend
     useEffect(() => {
-        const loadDiscoverFeed = async () => {
-            try {
-                setLoading(true);
-                const data = await screenApi.getAllScreens();
-                setScreens(data);
-            } catch (error) {
-                console.error("Failed to load marketplace screens:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        fetchWishlist();
+        fetchScreens({ search: debouncedSearchQuery, page: 1, per_page: PAGE_SIZE });
+    }, [debouncedSearchQuery, fetchScreens, fetchWishlist]);
 
-        void loadDiscoverFeed();
-    }, []);
+    // On category change: reset to page 1 and fetch fresh 10 from backend
+    useEffect(() => {
+        fetchScreens({ search: debouncedSearchQuery, page: 1, per_page: PAGE_SIZE });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedVenue]);
 
     const onRefresh = useCallback(async () => {
-        setRefreshing(true);
-        clearCache('screens_all');
-        try {
-            const data = await screenApi.getAllScreens();
-            setScreens(data);
-        } catch (error) {
-            console.error("Failed to refresh marketplace screens:", error);
-        } finally {
-            setRefreshing(false);
-        }
-    }, []);
+        await refreshScreens();
+    }, [refreshScreens]);
 
+    // Local category filter applied on top of whatever the backend returned.
+    // Since the backend doesn't support category_id yet, we filter the loaded pages locally.
     const filteredLocations = useMemo(() => {
-        let result = screens;
+        let result = screens || [];
 
         if (selectedVenue !== 'For You') {
             result = result.filter((item) => {
-                const venueType = item.venueType?.toLowerCase() || '';
-                if (CATEGORY_MAP[selectedVenue]) {
-                    return CATEGORY_MAP[selectedVenue].some(keyword => venueType.includes(keyword));
-                }
-                return venueType.includes(selectedVenue.toLowerCase());
-            });
-        }
-
-        if (searchQuery.trim() !== '') {
-            const lowerQuery = searchQuery.toLowerCase();
-            result = result.filter((item) => {
-                const name = item.name?.toLowerCase() || '';
-                const location = item.address?.toLowerCase() || '';
-                return name.includes(lowerQuery) || location.includes(lowerQuery);
+                const keywords = CATEGORY_MAP[selectedVenue] || [selectedVenue.toLowerCase()];
+                const searchableText = `${item.name} ${item.description} ${item.address} ${item.venueType || ''}`.toLowerCase();
+                return keywords.some(keyword => searchableText.includes(keyword));
             });
         }
 
         return result;
-    }, [selectedVenue, screens, searchQuery]);
+    }, [selectedVenue, screens]);
 
     const handleVenueSelect = useCallback((venue: string) => {
         setSelectedVenue(venue);
-    }, []);
+    }, [setSelectedVenue]);
 
     return {
         loading,
@@ -86,5 +77,11 @@ export function useHomeScreen() {
         setSearchQuery,
         refreshing,
         onRefresh,
+        // Wire directly to the store's real backend paginator
+        loadMoreScreens,
+        loadLessScreens,
+        hasMore: pagination?.has_next ?? false,
+        canLoadLess: (pagination?.page ?? 1) > 1,
+        pagination,
     };
 }
