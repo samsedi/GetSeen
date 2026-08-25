@@ -351,6 +351,7 @@ const createStyles = (isTablet: boolean, theme: any) => StyleSheet.create({
     modalDownloadBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 14, borderRadius: 16, marginTop: 10,
+        width: '100%',
     },
     modalDownloadText: { color: 'white', fontSize: 16, fontWeight: '700' },
     loadMoreContainer: {
