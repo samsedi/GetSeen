@@ -11,7 +11,7 @@ const VARIANT = process.env.APP_VARIANT || 'production';
 const GOOGLE_SERVICES_JSON = path.join(__dirname, 'google-services.json');
 const GOOGLE_SERVICE_INFO_PLIST = path.join(__dirname, 'GoogleService-Info.plist');
 
-const ANDROID_PACKAGE = `com.getseen.app${{ development: '.dev', preview: '.preview', production: '' }[VARIANT]}`;
+const ANDROID_PACKAGE = `com.trygetseen.ads${{ development: '.dev', preview: '.preview', production: '' }[VARIANT]}`;
 
 // The Google Services Gradle plugin hard-fails the build if the app's package name isn't
 // registered as a client in google-services.json. Only the production package is registered
