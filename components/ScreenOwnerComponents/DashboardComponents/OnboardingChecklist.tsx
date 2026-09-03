@@ -7,6 +7,7 @@ import { DashboardOnboardingInfo } from '@/api/ownerDashboardService';
 
 interface OnboardingChecklistProps {
     onboarding: DashboardOnboardingInfo | null | undefined;
+    hasScreens?: boolean;
 }
 
 const STEP_META: Record<'profile' | 'tutorial' | 'screen', { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
@@ -21,12 +22,12 @@ const NEXT_STEP_CTA: Record<string, string> = {
     screen: 'Add Your First Screen',
 };
 
-export default function OnboardingChecklist({ onboarding }: OnboardingChecklistProps) {
+export default function OnboardingChecklist({ onboarding, hasScreens }: OnboardingChecklistProps) {
     const theme = useAppTheme();
     const router = useRouter();
     const styles = useMemo(() => createStyles(theme), [theme]);
 
-    if (!onboarding || onboarding.is_complete || !onboarding.first_time_vendor) return null;
+    if (!onboarding || onboarding.is_complete || !onboarding.first_time_vendor || hasScreens) return null;
 
     const handleContinue = () => {
         switch (onboarding.next_step) {

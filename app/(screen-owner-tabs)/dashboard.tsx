@@ -84,7 +84,7 @@ export default function DashboardScreen() {
             >
                 <DashboardOverview stats={stats} />
 
-                <OnboardingChecklist onboarding={onboarding} />
+                <OnboardingChecklist onboarding={onboarding} hasScreens={stats.screens.total > 0} />
 
                 <View style={styles.section}>
                     {/* Section header + tab toggle */}
