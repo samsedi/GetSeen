@@ -26,7 +26,7 @@ export default function OnboardingChecklist({ onboarding }: OnboardingChecklistP
     const router = useRouter();
     const styles = useMemo(() => createStyles(theme), [theme]);
 
-    if (!onboarding || onboarding.is_complete) return null;
+    if (!onboarding || onboarding.is_complete || !onboarding.first_time_vendor) return null;
 
     const handleContinue = () => {
         switch (onboarding.next_step) {

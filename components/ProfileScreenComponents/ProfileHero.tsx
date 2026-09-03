@@ -57,7 +57,7 @@ export default function ProfileHero({ name, company, imageUrl, tintColor, onEdit
 
                 <View style={styles.badgeRow}>
                     <View style={styles.glassWrapper}>
-                        <Text style={styles.premiumText}>PREMIUM PARTNER</Text>
+                        <Text style={styles.premiumText}>SCREEN OWNER</Text>
                     </View>
                 </View>
             </View>

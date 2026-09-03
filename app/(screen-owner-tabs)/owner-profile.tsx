@@ -179,19 +179,7 @@ export default function OwnerProfileScreen() {
                     </>
                 )}
 
-                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
-                        Activity
-                    </Text>
 
-                    <SupportButton
-                        label="Screen Reviews"
-                        icon={<Ionicons name="star-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
-                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
-                        tintColor={ownerTint}
-                        onPress={() => router.push('/screen-owner-homeSubScreens/ownerReviews')}
-                    />
-                </View>
 
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
                     <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
