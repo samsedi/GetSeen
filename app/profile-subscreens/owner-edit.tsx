@@ -338,18 +338,7 @@ export default function OwnerEditProfileScreen() {
                     </View>
                 </View>
 
-                {/* SECURITY */}
-                <View style={styles.sectionCard}>
-                    <SectionHeader title="Security" />
-                    <TouchableOpacity 
-                        style={[styles.changePasswordBtn, { backgroundColor: colorScheme === 'dark' ? '#2A2A2A' : '#F5F5F5' }]} 
-                        onPress={() => router.push('/profile-subscreens/change-password')}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons name="lock-closed-outline" size={20} color={activeTint} />
-                        <Text style={[styles.changePasswordText, { color: activeTint }]}>Change Password</Text>
-                    </TouchableOpacity>
-                </View>
+
 
             </KeyboardAwareScrollView>
 
