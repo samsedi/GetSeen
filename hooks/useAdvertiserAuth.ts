@@ -11,10 +11,10 @@ import { useFormCacheStore } from '@/store/useFormCacheStore';
 // Shared validation patterns
 // --------------------------------------------------------------------------
 export const AUTH_REGEX = {
-    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    password: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
-    phone: /^(\+234|0)[789][01]\d{8}$/,
-    name: /.+/,
+    email: /.*/,
+    password: /.*/,
+    phone: /.*/,
+    name: /.*/,
 };
 
 // --------------------------------------------------------------------------

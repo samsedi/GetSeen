@@ -191,20 +191,7 @@ export default function ProfileScreen() {
                             </View>
                         </View>
 
-                {/* ACTIVITY SECTION */}
-                <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
-                    <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 16 }]}>
-                        Activity
-                    </Text>
 
-                    <SupportButton
-                        label="My Reviews"
-                        icon={<Ionicons name="star-outline" size={isTablet ? 24 : 20} color={activeTint} />}
-                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
-                        tintColor={activeTint}
-                        onPress={() => router.push('/homeSubScreens/myReviews')}
-                    />
-                </View>
 
                 {/* SUPPORT & FEEDBACK SECTION */}
                 <View style={[styles.section, { paddingHorizontal: isTablet ? 40 : 24, marginBottom: 10 }]}>
