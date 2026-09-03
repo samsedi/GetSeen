@@ -111,6 +111,7 @@ export default function ProfileScreen() {
                     name={displayName}
                             company={companyName}
                             imageUrl={avatarUrl}
+                            badgeLabel="ADVERTISER"
                             tintColor={activeTint}
                             onEditPress={() => router.push('/profile-subscreens/edit')}
                         />

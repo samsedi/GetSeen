@@ -15,11 +15,12 @@ interface ProfileHeroProps {
     name: string;
     company: string;
     imageUrl: string;
+    badgeLabel?: string;
     tintColor?: string;
     onEditPress?: () => void; // Trigger for Image Picker or Edit Modal
 }
 
-export default function ProfileHero({ name, company, imageUrl, tintColor, onEditPress }: ProfileHeroProps) {
+export default function ProfileHero({ name, company, imageUrl, badgeLabel, tintColor, onEditPress }: ProfileHeroProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
 
@@ -57,7 +58,7 @@ export default function ProfileHero({ name, company, imageUrl, tintColor, onEdit
 
                 <View style={styles.badgeRow}>
                     <View style={styles.glassWrapper}>
-                        <Text style={styles.premiumText}>SCREEN OWNER</Text>
+                        <Text style={styles.premiumText}>{badgeLabel || 'PREMIUM PARTNER'}</Text>
                     </View>
                 </View>
             </View>

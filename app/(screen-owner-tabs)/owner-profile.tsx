@@ -113,6 +113,7 @@ export default function OwnerProfileScreen() {
                             name={companyName}
                             company="Screen Network Owner"
                             imageUrl={avatarUrl}
+                            badgeLabel="SCREEN OWNER"
                             tintColor={ownerTint}
                             onEditPress={() => router.push('/profile-subscreens/owner-edit')}
                         />
