@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { StyleSheet, Text, View, useWindowDimensions, TextInput, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme, AppTheme, Typography } from '@/constants/theme';
 import { PayoutHistoryData } from '@/hooks/useWallet';
+import PaymentReceiptModal from './PaymentReceiptModal';
 
 interface PayoutsViewProps {
     payoutHistory: PayoutHistoryData[];
 }
+
+type StatusFilter = 'All' | 'Pending' | 'Paid';
 
 export function PayoutsView({ payoutHistory }: PayoutsViewProps) {
     const { width } = useWindowDimensions();
@@ -14,39 +17,105 @@ export function PayoutsView({ payoutHistory }: PayoutsViewProps) {
     const theme = useAppTheme();
     const ownerTint = theme.brandNavy;
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+    
+    const [selectedPayout, setSelectedPayout] = useState<PayoutHistoryData | null>(null);
+    const [isReceiptVisible, setIsReceiptVisible] = useState(false);
+
     const styles = useMemo(() => createStyles(isTablet, theme, ownerTint), [isTablet, theme, ownerTint]);
+
+    const filteredPayouts = useMemo(() => {
+        return payoutHistory.filter(payout => {
+            const matchesSearch = payout.screenTitle.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesStatus = statusFilter === 'All' || payout.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [payoutHistory, searchQuery, statusFilter]);
+
+    const openReceipt = (payout: PayoutHistoryData) => {
+        setSelectedPayout(payout);
+        setIsReceiptVisible(true);
+    };
 
     return (
         <View style={styles.container}>
-            {renderHistorySection(payoutHistory, styles, theme)}
-        </View>
-    );
-}
+            {/* Filters Section */}
+            <View style={styles.filterSection}>
+                <View style={[styles.searchContainer, { backgroundColor: theme.cardSoft, borderColor: theme.border }]}>
+                    <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
+                    <TextInput
+                        style={[styles.searchInput, { color: theme.text }]}
+                        placeholder="Search venue"
+                        placeholderTextColor={theme.textSecondary}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                            <Ionicons name="close-circle" size={16} color={theme.textSecondary} />
+                        </TouchableOpacity>
+                    )}
+                </View>
 
+                <View style={styles.chipsContainer}>
+                    {(['All', 'Pending', 'Paid'] as StatusFilter[]).map((status) => (
+                        <TouchableOpacity
+                            key={status}
+                            style={[
+                                styles.chip,
+                                { backgroundColor: statusFilter === status ? theme.brandNavy : theme.cardSoft },
+                                statusFilter !== status && { borderWidth: 1, borderColor: theme.border }
+                            ]}
+                            onPress={() => setStatusFilter(status)}
+                        >
+                            <Text style={[
+                                styles.chipText,
+                                { color: statusFilter === status ? '#FFF' : theme.textSecondary }
+                            ]}>
+                                {status}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
 
-function renderHistorySection(payoutHistory: PayoutHistoryData[], styles: any, theme: AppTheme) {
-    return (
-        <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Payout History</Text>
-            {payoutHistory.length === 0 ? renderEmptyState(styles, theme) : payoutHistory.map(payout => renderPayoutCard(payout, styles, theme))}
-        </View>
-    );
-}
+            {/* History Section */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>Payout History</Text>
+                {filteredPayouts.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="receipt-outline" size={48} color={theme.textSecondary} />
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No payouts found.</Text>
+                    </View>
+                ) : (
+                    filteredPayouts.map(payout => (
+                        <View key={payout.id} style={[styles.dataCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                            {renderCardHeader(payout, styles, theme)}
+                            {renderCardGrid(payout, styles, theme)}
+                            
+                            {payout.status === 'Paid' && (
+                                <View style={[styles.cardFooter, { borderTopColor: theme.border }]}>
+                                    <TouchableOpacity 
+                                        style={[styles.actionBtn, { borderColor: theme.border }]} 
+                                        onPress={() => openReceipt(payout)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="receipt-outline" size={16} color={theme.success} style={{ marginRight: 6 }} />
+                                        <Text style={[styles.actionBtnText, { color: theme.success }]}>View Receipt</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    ))
+                )}
+            </View>
 
-function renderEmptyState(styles: any, theme: AppTheme) {
-    return (
-        <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={48} color={theme.textSecondary} />
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No payout history.</Text>
-        </View>
-    );
-}
-
-function renderPayoutCard(payout: PayoutHistoryData, styles: any, theme: AppTheme) {
-    return (
-        <View key={payout.id} style={[styles.dataCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            {renderCardHeader(payout, styles, theme)}
-            {renderCardGrid(payout, styles, theme)}
+            <PaymentReceiptModal 
+                visible={isReceiptVisible} 
+                payout={selectedPayout} 
+                onClose={() => setIsReceiptVisible(false)} 
+            />
         </View>
     );
 }
@@ -91,31 +160,46 @@ function renderGridItem(label: string, value: string | number, valueColor: strin
 
 const createStyles = (isTablet: boolean, theme: AppTheme, ownerTint: string) => StyleSheet.create({
     container: { flex: 1 },
+    
+    filterSection: {
+        paddingHorizontal: 20,
+        marginTop: 16,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        height: 44,
+        marginBottom: 12,
+    },
+    searchIcon: {
+        marginRight: 8,
+    },
+    searchInput: {
+        flex: 1,
+        height: '100%',
+        fontSize: 15,
+    },
+    chipsContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    chip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    chipText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+
     section: { marginTop: 24, paddingHorizontal: 20 },
     sectionTitle: { ...Typography.h3, fontWeight: '800', marginBottom: 16 },
     emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
     emptyText: { marginTop: 12, fontSize: 16, fontWeight: '500' },
-    
-    bankDetailsContainer: {
-        marginHorizontal: 20,
-        borderRadius: 16,
-        borderWidth: 1,
-        padding: 20,
-        marginTop: 10,
-    },
-    bankDetailsBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    bankTitle: { fontSize: 14, fontWeight: '700' },
-    bankSubtitle: { fontSize: 13, marginTop: 2 },
-    editBtn: { fontSize: 14, fontWeight: '600', padding: 8 },
-    withdrawBtn: { marginTop: 20, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-    withdrawBtnText: { color: 'white', fontWeight: '700', fontSize: 16 },
     
     dataCard: {
         borderRadius: 16,
@@ -156,9 +240,10 @@ const createStyles = (isTablet: boolean, theme: AppTheme, ownerTint: string) => 
         flexDirection: 'row',
         justifyContent: 'flex-end',
         alignItems: 'center',
-        padding: 16,
+        padding: 12,
+        paddingHorizontal: 16,
         borderTopWidth: StyleSheet.hairlineWidth,
-        backgroundColor: theme.background,
+        backgroundColor: 'rgba(0,0,0,0.02)',
     },
     actionBtn: {
         flexDirection: 'row',
@@ -167,6 +252,7 @@ const createStyles = (isTablet: boolean, theme: AppTheme, ownerTint: string) => 
         paddingHorizontal: 12,
         borderRadius: 8,
         borderWidth: 1,
+        backgroundColor: '#FFF'
     },
     actionBtnText: { fontSize: 13, fontWeight: '600' }
 });

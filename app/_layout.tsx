@@ -16,6 +16,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useAuthStore } from '@/store/authStore';
 import { useAppStore } from '@/store/appStore';
+import { useAppUpdate } from '@/hooks/useAppUpdate';
 
 // Prevent the native splash screen from auto-hiding before we're ready
 SplashScreen.preventAutoHideAsync();
@@ -30,6 +31,9 @@ export default function RootLayout() {
     
     const [isSplashAnimationComplete, setIsSplashAnimationComplete] = useState(false);
     const [isAppReady, setIsAppReady] = useState(false);
+    
+    // Proactively check for OTA updates on launch
+    useAppUpdate();
 
     useEffect(() => {
         // Hydrate auth store from SecureStore on app startup

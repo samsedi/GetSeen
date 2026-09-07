@@ -24,7 +24,7 @@ export default function ContactSupportScreen() {
 
     const handleWhatsApp = async () => {
         // Replace with actual support number
-        const phoneNumber = "+2348000000000"; 
+        const phoneNumber = "+2347076267899"; 
         const message = "Hi Get Seen Support, I need some help.";
         const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
         
@@ -39,6 +39,10 @@ export default function ContactSupportScreen() {
         } catch (error) {
             console.error("Error opening WhatsApp:", error);
         }
+    };
+
+    const handleEmail = () => {
+        Linking.openURL('mailto:info@trygetseen.com');
     };
 
     return (
@@ -67,6 +71,21 @@ export default function ContactSupportScreen() {
                     <View style={styles.cardText}>
                         <Text style={[styles.cardTitle, { color: theme.text }]}>Report a Bug or Issue</Text>
                         <Text style={[styles.cardDesc, { color: theme.textSecondary }]}>Let us know if something isn't working right.</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                    style={[styles.supportCard, { backgroundColor: theme.cardSoft }]}
+                    onPress={handleEmail}
+                    activeOpacity={0.8}
+                >
+                    <View style={[styles.iconBox, { backgroundColor: theme.tint + '15' }]}>
+                        <Ionicons name="mail" size={24} color={theme.tint} />
+                    </View>
+                    <View style={styles.cardText}>
+                        <Text style={[styles.cardTitle, { color: theme.text }]}>Send an Email</Text>
+                        <Text style={[styles.cardDesc, { color: theme.textSecondary }]}>Email us directly at info@trygetseen.com.</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
                 </TouchableOpacity>

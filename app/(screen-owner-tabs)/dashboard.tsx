@@ -27,7 +27,7 @@ import { useDashboard } from '@/hooks/useDashboard';
 
 export default function DashboardScreen() {
     // ─── Logic (all state + data-fetching lives in the hook) ───────────────
-    const { displayedScreens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats, onboarding, refreshing, onRefresh } = useDashboard();
+    const { displayedScreens, screens, loading, activeTab, setActiveTab, searchQuery, setSearchQuery, stats, onboarding, refreshing, onRefresh } = useDashboard();
 
     // ─── UI-only concerns ──────────────────────────────────────────────────
     const { width } = useWindowDimensions();
@@ -84,7 +84,7 @@ export default function DashboardScreen() {
             >
                 <DashboardOverview stats={stats} />
 
-                <OnboardingChecklist onboarding={onboarding} hasScreens={stats.screens.total > 0} />
+                <OnboardingChecklist onboarding={onboarding} hasScreens={stats.totalScreens > 0 || screens.length > 0} />
 
                 <View style={styles.section}>
                     {/* Section header + tab toggle */}

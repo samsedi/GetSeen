@@ -104,7 +104,7 @@ export const useOwnerWalletStore = create<OwnerWalletState>()(
                 try {
                     const [earningsData, payoutsData] = await Promise.all([
                         ownerWalletApi.fetchEarnings(),
-                        ownerWalletApi.fetchPayouts({ page: 1, per_page: 10 })
+                        ownerWalletApi.fetchPayouts({ page: 1, per_page: 500 })
                     ]);
                     set({
                         earnings: earningsData,

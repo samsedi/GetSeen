@@ -8,9 +8,11 @@ interface OwnerDashboardState {
     loading: boolean;
     error: string | null;
     completingTutorial: boolean;
+    dismissedOnboarding: boolean;
 
     fetchDashboard: (forceRefresh?: boolean) => Promise<void>;
     completeTutorial: () => Promise<{ success: boolean; message?: string }>;
+    dismissOnboarding: () => void;
 }
 
 export const useOwnerDashboardStore = create<OwnerDashboardState>()(
@@ -20,6 +22,9 @@ export const useOwnerDashboardStore = create<OwnerDashboardState>()(
             loading: false,
             error: null,
             completingTutorial: false,
+            dismissedOnboarding: false,
+
+            dismissOnboarding: () => set({ dismissedOnboarding: true }),
 
             completeTutorial: async () => {
                 set({ completingTutorial: true });
@@ -62,7 +67,8 @@ export const useOwnerDashboardStore = create<OwnerDashboardState>()(
             migrate: (persistedState: any, version: number) => undefined as any,
             storage: createJSONStorage(() => fileSystemStorage),
             partialize: (state) => ({
-                dashboardData: state.dashboardData
+                dashboardData: state.dashboardData,
+                dismissedOnboarding: state.dismissedOnboarding,
             }),
         }
     )

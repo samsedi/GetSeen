@@ -15,6 +15,7 @@ export type DashboardTab = 'ACTIVE' | 'DRAFTS';
 
 export interface DashboardOverviewStats {
     activeScreens: number;
+    totalScreens: number;
     totalEarnings: string;
     totalPaid: string;
     pendingPayout: string;
@@ -111,7 +112,8 @@ export function useDashboard() {
             totalEarnings: formatAmount(dashboardData?.earnings?.total_earnings || 0),
             totalPaid: formatAmount(dashboardData?.earnings?.total_paid || 0),
             pendingPayout: formatAmount(dashboardData?.earnings?.pending_payout || 0),
-            activeScreens: dashboardData?.screens?.active || 0
+            activeScreens: dashboardData?.screens?.active || 0,
+            totalScreens: dashboardData?.screens?.total || 0
         };
     }, [dashboardData]);
 

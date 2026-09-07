@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, Text, View, useWindowDimensions } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '@/constants/theme';
 
 interface SupportButtonProps {
     label: string;
@@ -13,6 +14,7 @@ interface SupportButtonProps {
 export default function SupportButton({ label, icon, bgColor, tintColor, onPress }: SupportButtonProps) {
     const { width } = useWindowDimensions();
     const isTablet = width >= 600;
+    const theme = useAppTheme();
 
     return (
         <TouchableOpacity
@@ -24,12 +26,12 @@ export default function SupportButton({ label, icon, bgColor, tintColor, onPress
                 <View style={styles.iconWrapper}>
                     {icon}
                 </View>
-                <Text style={[styles.label, { color: '#3B242A', fontSize: isTablet ? 18 : 16 }]}>
+                <Text style={[styles.label, { color: theme.text, fontSize: isTablet ? 18 : 16 }]}>
                     {label}
                 </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={18} color="rgba(59, 36, 42, 0.3)" />
+            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
         </TouchableOpacity>
     );
 }

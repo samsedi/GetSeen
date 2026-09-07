@@ -125,7 +125,12 @@ function DetailContent({ isTablet, data }: Props) {
             {showLocation && (
                 <View style={styles.infoBox}>
                     {locationInfo.map((info, index) => (
-                        <Text key={`loc-${index}`} style={styles.infoText}>
+                        <Text 
+                            key={`loc-${index}`} 
+                            style={styles.infoText}
+                            numberOfLines={info.label === 'Target Audience' ? 1 : undefined}
+                            ellipsizeMode="tail"
+                        >
                             • <Text style={{ fontWeight: 'bold' }}>{info.label}:</Text>{' '}
                             {info.value}
                         </Text>

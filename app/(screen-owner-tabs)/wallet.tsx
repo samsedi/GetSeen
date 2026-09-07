@@ -12,7 +12,7 @@ export default function WalletScreen() {
     const theme = useAppTheme();
     const insets = useSafeAreaInsets();
     
-    const { activeTab, setActiveTab, loading, earningsSummary, payoutHistory } = useWallet();
+    const { activeTab, setActiveTab, loading, earningsSummary, payoutHistory, venueEarnings, timeFilter, setTimeFilter } = useWallet();
 
     const styles = useMemo(() => createStyles(isTablet, theme, insets), [isTablet, theme, insets]);
 
@@ -20,7 +20,7 @@ export default function WalletScreen() {
         <View style={styles.rootContainer}>
             {renderHeader(styles)}
             {renderSegmentedControl(activeTab, setActiveTab, styles, theme)}
-            {renderContent(activeTab, loading, earningsSummary, payoutHistory, styles, theme)}
+            {renderContent(activeTab, loading, earningsSummary, payoutHistory, venueEarnings, timeFilter, setTimeFilter, styles, theme)}
         </View>
     );
 }
@@ -58,14 +58,14 @@ function renderSegmentButton(tabValue: WalletTab, label: string, activeTab: Wall
     );
 }
 
-function renderContent(activeTab: WalletTab, loading: boolean, earningsSummary: any, payoutHistory: any, styles: any, theme: AppTheme) {
+function renderContent(activeTab: WalletTab, loading: boolean, earningsSummary: any, payoutHistory: any, venueEarnings: any, timeFilter: any, setTimeFilter: any, styles: any, theme: AppTheme) {
     if (loading) {
         return renderLoadingSpinner(theme);
     }
     return (
         <ScrollView contentContainerStyle={styles.mainScroll} showsVerticalScrollIndicator={false}>
             {activeTab === 'earnings'
-                ? <EarningsView earningsSummary={earningsSummary} />
+                ? <EarningsView earningsSummary={earningsSummary} venueEarnings={venueEarnings} timeFilter={timeFilter} setTimeFilter={setTimeFilter} />
                 : <PayoutsView payoutHistory={payoutHistory} />}
         </ScrollView>
     );

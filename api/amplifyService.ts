@@ -3,6 +3,7 @@ import { PaginationMeta } from './advertiserScreenService';
 
 // ─────────────────────────────────────────────────────────────
 // Types
+
 // ─────────────────────────────────────────────────────────────
 
 export interface AmplifyMedia {

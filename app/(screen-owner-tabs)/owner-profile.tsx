@@ -188,19 +188,11 @@ export default function OwnerProfileScreen() {
                     </Text>
 
                     <SupportButton
-                        label="Contact Support"
-                        icon={<Ionicons name="logo-whatsapp" size={isTablet ? 24 : 20} color={ownerTint} />}
+                        label="Help & Support"
+                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
                         bgColor={colorScheme === 'dark' ? '#1E2430' : '#EAEFF8'}
                         tintColor={ownerTint}
-                        onPress={handleWhatsApp}
-                    />
-
-                    <SupportButton
-                        label="Report a Bug"
-                        icon={<Ionicons name="mail-outline" size={isTablet ? 24 : 20} color={ownerTint} />}
-                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
-                        tintColor={ownerTint}
-                        onPress={handleEmail}
+                        onPress={() => router.push('/profile-subscreens/support')}
                     />
                 </View>
 

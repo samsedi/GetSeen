@@ -201,19 +201,11 @@ export default function ProfileScreen() {
                     </Text>
 
                     <SupportButton
-                        label="Contact Support"
-                        icon={<Ionicons name="logo-whatsapp" size={isTablet ? 24 : 20} color={activeTint} />}
+                        label="Help & Support"
+                        icon={<Ionicons name="headset-outline" size={isTablet ? 24 : 20} color={activeTint} />}
                         bgColor={colorScheme === 'dark' ? '#2A181C' : '#FEE2E9'}
                         tintColor={activeTint}
-                        onPress={handleWhatsApp}
-                    />
-
-                    <SupportButton
-                        label="Report a Bug"
-                        icon={<Ionicons name="mail-outline" size={isTablet ? 24 : 20} color={activeTint} />}
-                        bgColor={colorScheme === 'dark' ? '#1C1C1E' : '#F3F4F6'}
-                        tintColor={activeTint}
-                        onPress={handleEmail}
+                        onPress={() => router.push('/profile-subscreens/support')}
                     />
                 </View>
 

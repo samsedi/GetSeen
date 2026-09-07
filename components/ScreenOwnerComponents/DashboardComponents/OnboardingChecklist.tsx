@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { AppTheme, Typography, useAppTheme } from '@/constants/theme';
 import { DashboardOnboardingInfo } from '@/api/ownerDashboardService';
+import { useOwnerDashboardStore } from '@/store/useOwnerDashboardStore';
 
 interface OnboardingChecklistProps {
     onboarding: DashboardOnboardingInfo | null | undefined;
@@ -26,8 +27,9 @@ export default function OnboardingChecklist({ onboarding, hasScreens }: Onboardi
     const theme = useAppTheme();
     const router = useRouter();
     const styles = useMemo(() => createStyles(theme), [theme]);
+    const { dismissedOnboarding, dismissOnboarding } = useOwnerDashboardStore();
 
-    if (!onboarding || onboarding.is_complete || !onboarding.first_time_vendor || hasScreens) return null;
+    if (!onboarding || onboarding.is_complete || !onboarding.first_time_vendor || hasScreens || dismissedOnboarding) return null;
 
     const handleContinue = () => {
         switch (onboarding.next_step) {
@@ -51,7 +53,12 @@ export default function OnboardingChecklist({ onboarding, hasScreens }: Onboardi
 
     return (
         <View style={styles.container}>
-            <Text style={styles.sectionTitle}>Finish Setting Up</Text>
+            <View style={styles.headerRow}>
+                <Text style={styles.sectionTitle}>Finish Setting Up</Text>
+                <TouchableOpacity onPress={dismissOnboarding} style={styles.dismissButton}>
+                    <Ionicons name="close" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+            </View>
 
             <View style={styles.card}>
                 {steps.map((key, i) => {
@@ -118,7 +125,9 @@ export default function OnboardingChecklist({ onboarding, hasScreens }: Onboardi
 const createStyles = (theme: AppTheme) =>
     StyleSheet.create({
         container: { paddingHorizontal: 20, marginTop: 4 },
-        sectionTitle: { ...Typography.h2, color: theme.text, marginBottom: 10, fontSize: 16 },
+        headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+        sectionTitle: { ...Typography.h2, color: theme.text, fontSize: 16 },
+        dismissButton: { padding: 4 },
         card: {
             backgroundColor: theme.cardSurface,
             borderRadius: 20,

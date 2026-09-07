@@ -1,5 +1,4 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/store/authStore';
 
 // No silent fallback: every build profile (development/preview/production) must set this
 // explicitly in eas.json or .env, so a misconfigured build fails loudly instead of quietly
@@ -19,11 +18,14 @@ const apiClient = axios.create({
     },
 });
 
+// Helper to avoid require cycles
+const getAuthStore = () => require('@/store/authStore').useAuthStore.getState();
+
 // --- REQUEST INTERCEPTOR ---
 // Reads the access token synchronously from Zustand (no async SecureStore call needed)
 apiClient.interceptors.request.use(
     (config) => {
-        const token = useAuthStore.getState().accessToken;
+        const token = getAuthStore().accessToken;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -54,7 +56,7 @@ const executeRefreshRequest = async (refreshToken: string) => {
 const handleRefreshFailure = async () => {
     console.error("Refresh token expired or invalid. Executing smart logout.");
     // Use the Zustand logout action which clears everything
-    await useAuthStore.getState().logout();
+    await getAuthStore().logout();
 };
 
 const handleRefreshSuccess = async (refreshResponse: any, originalRequest: InternalAxiosRequestConfig) => {
@@ -62,7 +64,7 @@ const handleRefreshSuccess = async (refreshResponse: any, originalRequest: Inter
     const newRefreshToken = refreshResponse.data.data.refresh_token;
 
     // Update Zustand + SecureStore in one shot via the store action
-    await useAuthStore.getState().setTokens(newAccessToken, newRefreshToken || undefined);
+    await getAuthStore().setTokens(newAccessToken, newRefreshToken || undefined);
 
     processQueue(null, newAccessToken);
     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -72,7 +74,7 @@ const handleRefreshSuccess = async (refreshResponse: any, originalRequest: Inter
 
 const attemptTokenRefreshSafely = async (originalRequest: InternalAxiosRequestConfig) => {
     try {
-        const refreshToken = useAuthStore.getState().refreshToken;
+        const refreshToken = getAuthStore().refreshToken;
         if (!refreshToken) throw new Error("No refresh token available");
 
         const refreshResponse = await executeRefreshRequest(refreshToken);
@@ -115,7 +117,7 @@ apiClient.interceptors.response.use(
             return attemptTokenRefreshSafely(originalRequest);
         }
 
-        const isServerError = error.response && (error.response.status === 503 || error.response.status === 502 || error.response.status === 504);
+        const isServerError = (error.response && (error.response.status === 503 || error.response.status === 502 || error.response.status === 504)) || (!error.response && error.message === 'Network Error');
         if (isServerError) {
             // Use require to avoid circular dependency
             const { useAppStore } = require('@/store/appStore');
